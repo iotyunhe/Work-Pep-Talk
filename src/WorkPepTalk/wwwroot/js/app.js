@@ -53,7 +53,7 @@
 
     if (view === 'ball') {
       root.innerHTML = Render.ball(c, cfg);
-      reportSize(76, 76);
+      reportSize(BALL_W, BALL_W);
       watchContent();
       return;
     }
@@ -85,6 +85,15 @@
    * 不会来回抖：reportSize 记住上次报过的 w×h，同值不重发；而内容高度只由
    * 宽度（固定 300）和文案决定，与窗口高度无关，所以量出来的值稳定。
    */
+  /*
+   * 两个尺寸常量：DESIGN_W 是挂件与面板的宽度（CSS 里的 --wd-w 与 .panel），
+   * BALL_W 是收起态窗口边长（球本身 56px + 四周留白，角标才不会被窗口裁掉）。
+   *
+   * DESIGN_W 参与「窗口宽度下限」的判断（见 syncSize），改宽度时三处要一起改。
+   */
+  const DESIGN_W = 300;
+  const BALL_W = 76;
+
   function viewRoot() {
     if (view === 'ball') return root.querySelector('.ball');
     if (view === 'panel') return root.querySelector('.panel');
@@ -100,10 +109,23 @@
    * 多出来的那一截就这么留在窗口上。
    */
   function syncSize(force) {
-    if (view === 'ball') { reportSize(76, 76, force); return; }
+    if (view === 'ball') { reportSize(BALL_W, BALL_W, force); return; }
     const el = viewRoot();
     if (!el) return;
-    reportSize(Math.ceil(el.offsetWidth), Math.ceil(el.offsetHeight), force);
+
+    /*
+     * 宽度取「实测」与「设计宽度」的较大者。
+     *
+     * 从收起态展开的那一瞬间，窗口还是小球尺寸（76px），视口只有 76 宽。
+     * 若把这个 76 当真报上去，宿主就把窗口设成 76 宽 —— 挂件被挤成一竖列，
+     * 而这一竖列又会量出同样的 76，内容和窗口互相自证，再也回不去原样。
+     *
+     * 窗口永远不该比设计宽度窄，所以这里给它一个硬下限：这一帧量出 76 也
+     * 只报 300，宿主按 300 开窗，下一帧视口就是 300，量出来的自然也是 300。
+     * CSS 那边 .wd 已经是定宽，这里再兜一道，防的是将来有人改样式时复发。
+     */
+    const w = Math.max(DESIGN_W, Math.ceil(el.offsetWidth));
+    reportSize(w, Math.ceil(el.offsetHeight), force);
   }
 
   /* 绘制后连量几次：字体、背景图这类异步资源回填会改行高 */

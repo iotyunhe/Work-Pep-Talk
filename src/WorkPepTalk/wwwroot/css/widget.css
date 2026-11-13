@@ -16,6 +16,18 @@
 
   --accent: #A8442A;
   --teal: #2F6B5E;
+
+  /*
+   * 挂件宽度是设计常量，不是「窗口有多宽」。
+   *
+   * 以前 .wd 写 width:100%，宽度跟着视口走 —— 从收起态（窗口 76×76）
+   * 展开时视口还只有 76px，于是挂件按 76px 排版、量出 76×297 报给宿主，
+   * 宿主把窗口也设成 76×297。内容和窗口从此互相印证，再也不会自己纠正。
+   *
+   * 写成定宽之后，不管当前窗口多宽，排版和测量都按 300 算。
+   * app.js 的 syncSize 里还有一道同样的下限兜底。
+   */
+  --wd-w: 300px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,7 +55,8 @@ body { user-select: none; -webkit-user-select: none; }
 
 .wd {
   position: relative;
-  width: 100%;
+  /* 定宽，不跟视口走 —— 见文件顶部 --wd-w 的说明 */
+  width: var(--wd-w);
   height: auto;
   padding: 11px 14px 12px;
   border-radius: 16px;
