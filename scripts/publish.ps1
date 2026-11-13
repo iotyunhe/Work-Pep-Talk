@@ -16,6 +16,13 @@ $root = Split-Path -Parent $PSScriptRoot
 $proj = Join-Path $root 'src/WorkPepTalk/WorkPepTalk.csproj'
 $out  = Join-Path $root 'publish'
 
+# 用户的真实配置就住在 publish/config.json 里，而下面整个目录要被删掉重建。
+# 不先备份的话，每打一次包用户就得重新设置一遍（月薪、背景、窗口位置全丢）。
+$cfgPath = Join-Path $out 'config.json'
+$cfgBak = Join-Path ([IO.Path]::GetTempPath()) 'wpt-config-backup.json'
+$hadCfg = Test-Path $cfgPath
+if ($hadCfg) { Copy-Item $cfgPath $cfgBak -Force }
+
 if (Test-Path $out) {
     Remove-Item $out -Recurse -Force
 }
@@ -63,6 +70,13 @@ $files = Get-ChildItem $out -Recurse -File
 if ($files.Count -ne 1) {
     Write-Host "警告：产物里还有 $($files.Count) 个文件，不是纯单文件：" -ForegroundColor Yellow
     $files | ForEach-Object { Write-Host ("  " + $_.FullName.Substring($out.Length + 1)) }
+}
+
+# 把用户的配置放回去。放在「单文件数量检查」之后，免得它被算成多余文件。
+if ($hadCfg -and (Test-Path $cfgBak)) {
+    Copy-Item $cfgBak $cfgPath -Force
+    Remove-Item $cfgBak -Force
+    Write-Host "已还原用户配置：$cfgPath" -ForegroundColor Green
 }
 
 $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
