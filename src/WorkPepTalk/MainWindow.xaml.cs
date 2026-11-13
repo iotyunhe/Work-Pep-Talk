@@ -28,7 +28,6 @@ public partial class MainWindow : Window
     private IntPtr _hIcon = IntPtr.Zero;
 
     private bool _webReady;
-    private string _lastSize = "";
     private bool _applyingSize;
 
     /* 打开设置面板前的挂件位置，面板关闭后据此归位 */
@@ -545,9 +544,15 @@ public partial class MainWindow : Window
     {
         if (w < 40 || h < 40) return;
 
-        var key = $"{w:0.#}x{h:0.#}";
-        if (key == _lastSize) return;
-        _lastSize = key;
+        /*
+         * 去重要拿「窗口现在的实际尺寸」比，不能用「上次报过的值」。
+         *
+         * 页面侧现在会持续对账：窗口被外部改大之后（KeepOnScreen、换显示器、
+         * 别的程序 SetWindowPos），它立刻按内容高度重报一次。若这里还拿一个
+         * 缓存 key 比对，就会认定「300x221 报过了」而把这次纠正扔掉 —— 那截
+         * 多出来的窗口底色就永远留在卡片下面。
+         */
+        if (Math.Abs(Width - w) < 0.5 && Math.Abs(Height - h) < 0.5) return;
 
         var wasTall = Height > 300;
         var willBeTall = h > 300;

@@ -54,18 +54,74 @@
     if (view === 'ball') {
       root.innerHTML = Render.ball(c, cfg);
       reportSize(76, 76);
+      watchContent();
       return;
     }
 
     if (view === 'panel') { drawPanel(c); return; }
 
     root.innerHTML = Render.widget(c, cfg);
-    reportSize(300, measureWidget());
+    scheduleSizeSync();
   }
 
-  function measureWidget() {
-    const el = root.querySelector('.wd');
-    return el ? Math.ceil(el.offsetHeight) : 216;
+  /*
+   * ------------------------------------------------------------ 尺寸同步
+   *
+   * 窗口高度必须恒等于内容高度。多一像素，窗口底色（#FBFAF7）就会从卡片
+   * 底下露出来，看着就是「卡片下面多了一截白条」；少一像素，底部会被裁掉。
+   *
+   * 以前是「绘完量一次、报一次」，只在那一个瞬间成立。只要之后有任何环节
+   * 让窗口比内容高（面板收起、内容临时变高、宿主 KeepOnScreen 微调），
+   * 页面就再也不纠正 —— 那一截白边会一直挂在那儿，直到下次整块重绘。
+   *
+   * 所以改成三方对账，任何一方变化都重新量：
+   *   1. 每次绘制后主动量（含 rAF 与两个延迟点，等字体/图片回填）
+   *   2. ResizeObserver 盯住当前视图的根元素，内容一变就量
+   *   3. window.resize 盯住窗口本身 —— 宿主把窗口改大时，这里立刻按内容纠回
+   *
+   * 第 3 条是关键：它让「窗口尺寸被人改错」这件事自我修复，而不是靠某一次
+   * 绘制恰好没被跳过。
+   *
+   * 不会来回抖：reportSize 记住上次报过的 w×h，同值不重发；而内容高度只由
+   * 宽度（固定 300）和文案决定，与窗口高度无关，所以量出来的值稳定。
+   */
+  function viewRoot() {
+    if (view === 'ball') return root.querySelector('.ball');
+    if (view === 'panel') return root.querySelector('.panel');
+    return root.querySelector('.wd');
+  }
+
+  /*
+   * force：窗口尺寸被外部改过时，必须无视「这个值报过了」的去重再报一次。
+   *
+   * 去重的前提是「窗口一定跟着我报的值」，但窗口其实会被别人改：宿主
+   * KeepOnScreen 夹边、换显示器、别的程序 SetWindowPos。一旦发生，缓存里
+   * 那个 300x221 就变成了谎话 —— 页面认为尺寸是对的，于是再也不说话，
+   * 多出来的那一截就这么留在窗口上。
+   */
+  function syncSize(force) {
+    if (view === 'ball') { reportSize(76, 76, force); return; }
+    const el = viewRoot();
+    if (!el) return;
+    reportSize(Math.ceil(el.offsetWidth), Math.ceil(el.offsetHeight), force);
+  }
+
+  /* 绘制后连量几次：字体、背景图这类异步资源回填会改行高 */
+  function scheduleSizeSync() {
+    syncSize();
+    requestAnimationFrame(syncSize);
+    setTimeout(syncSize, 120);
+    setTimeout(syncSize, 400);
+    watchContent();
+  }
+
+  let ro = null;
+  function watchContent() {
+    if (!window.ResizeObserver) return;
+    if (!ro) ro = new ResizeObserver(function () { syncSize(); });
+    ro.disconnect();
+    const el = viewRoot();
+    if (el) ro.observe(el);
   }
 
   /*
@@ -84,12 +140,13 @@
 
     root.innerHTML = window.Panel.render(c, cfg);
 
+    /* 滚动位置要等布局出来才还得了，尺寸则交给 scheduleSizeSync 连量几次 */
     requestAnimationFrame(function () {
       const el = root.querySelector('.panel');
-      if (!el) return;
-      if (scroll) el.scrollTop = scroll;
-      reportSize(Math.ceil(el.offsetWidth), Math.ceil(el.offsetHeight));
+      if (el && scroll) el.scrollTop = scroll;
+      syncSize();
     });
+    scheduleSizeSync();
   }
 
   /* 只改数字，不动结构 */
@@ -148,9 +205,9 @@
 
   /* 尺寸上报：宿主据此调整窗口大小，避免出现空白边或裁切 */
   let lastSize = '';
-  function reportSize(w, h) {
+  function reportSize(w, h, force) {
     const key = w + 'x' + h;
-    if (key === lastSize) return;
+    if (!force && key === lastSize) return;
     lastSize = key;
     host.send({ type: 'size', w: w, h: h });
   }
@@ -543,4 +600,19 @@
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) patch();
   });
+
+  /*
+   * 尺寸对账的两个入口（第三方是 scheduleSizeSync 里的 ResizeObserver）：
+   *
+   * window.resize —— 宿主动了窗口就重新量内容。这是唯一能兜住「窗口比内容
+   *   高出一截」的钩子：错值不是页面算错的，是窗口被别人改过之后页面没再说话。
+   *   量完如果和上次报的一样，reportSize 会自己跳过，不会互相推。
+   *
+   * document.fonts.ready —— 字体替换会改行高（挂件用思源/系统字，首帧用
+   *   回退字体时那 221px 未必是最终值），回填后补量一次。
+   */
+  window.addEventListener('resize', function () { syncSize(true); });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(syncSize).catch(function () {});
+  }
 })();
