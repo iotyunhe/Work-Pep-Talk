@@ -50,7 +50,10 @@ if ($LASTEXITCODE -ne 0) { throw "打包失败，退出码 $LASTEXITCODE" }
 $junk = @()
 $junk += Get-ChildItem -Path $out -Filter *.pdb -File -ErrorAction SilentlyContinue
 $junk += Get-ChildItem -Path $out -Filter *.xml -File -ErrorAction SilentlyContinue
-if ($junk) { $junk | Remove-Item -Force }
+if ($junk.Count -gt 0) {
+    # 用 LiteralPath 逐个删：管道给 Remove-Item 时，某些 PSObject 包装会绑定失败
+    foreach ($f in $junk) { Remove-Item -LiteralPath $f.FullName -Force }
+}
 
 $exe = Join-Path $out 'WorkPepTalk.exe'
 if (-not (Test-Path $exe)) { throw "没有生成 WorkPepTalk.exe，请检查打包日志" }

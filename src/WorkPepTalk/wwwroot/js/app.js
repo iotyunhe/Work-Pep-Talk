@@ -31,7 +31,6 @@
   let view = 'widget';          // widget | ball | panel
   let lastMood = null;          // 状态变了才整块重绘
   let timer = null;
-  let panelDirty = true;
 
   const root = document.getElementById('root');
 
@@ -58,15 +57,7 @@
       return;
     }
 
-    if (view === 'panel') {
-      root.innerHTML = window.Panel.render(c, cfg);
-      panelDirty = false;
-      requestAnimationFrame(function () {
-        const el = root.querySelector('.panel');
-        if (el) reportSize(Math.ceil(el.offsetWidth), Math.ceil(el.offsetHeight));
-      });
-      return;
-    }
+    if (view === 'panel') { drawPanel(c); return; }
 
     root.innerHTML = Render.widget(c, cfg);
     reportSize(300, measureWidget());
@@ -75,6 +66,30 @@
   function measureWidget() {
     const el = root.querySelector('.wd');
     return el ? Math.ceil(el.offsetHeight) : 216;
+  }
+
+  /*
+   * 面板重绘。
+   *
+   * 面板是一屏输入控件，重绘比挂件贵：滚动位置会被打回顶部 —— 小屏上刚滚到
+   * 「背景」那栏，点一下颜色又跳回最上面。所以记下 scrollTop，画完还回去。
+   *
+   * 焦点不在这里恢复。面板只在「用户已经离开输入框」之后才重绘（点击控件、
+   * change 事件），此时把焦点强塞回某个输入框只会打乱 Tab 顺序；而打字过程中
+   * 走的是 patch() 的局部刷新，根本不重绘 —— 那才是光标活下来的原因。
+   */
+  function drawPanel(c) {
+    const old = root.querySelector('.panel');
+    const scroll = old ? old.scrollTop : 0;
+
+    root.innerHTML = window.Panel.render(c, cfg);
+
+    requestAnimationFrame(function () {
+      const el = root.querySelector('.panel');
+      if (!el) return;
+      if (scroll) el.scrollTop = scroll;
+      reportSize(Math.ceil(el.offsetWidth), Math.ceil(el.offsetHeight));
+    });
   }
 
   /* 只改数字，不动结构 */
@@ -88,6 +103,19 @@
 
     const c = compute();
     const mood = Core.moodOf(c);
+
+    /*
+     * 面板视图：只把两个折算结果改文本，绝不整块重绘。
+     *
+     * 这里曾经是「找不到 .wd-amt 就 draw()」，而面板里没有 .wd-amt ——
+     * 于是每秒都整块重绘一次，用户点进金额框后光标最多活一秒就没了。
+     * 面板的实时数字由 panel.js 的 refreshDerived 负责，那是纯文本赋值，
+     * 不会动 DOM 结构，也就不会碰焦点。
+     */
+    if (view === 'panel') {
+      if (window.Panel) window.Panel.refreshDerived(c, cfg);
+      return;
+    }
 
     /* 状态变了就整块重绘：tip、表情、右格标签都可能要换 */
     if (mood !== lastMood) { draw(); return; }
@@ -116,7 +144,6 @@
       const badge = q('.ball-badge');
       if (badge) badge.textContent = '¥' + Core.yuan(c.earned);
     }
-    if (view === 'panel' && panelDirty) { draw(); }
   }
 
   /* 尺寸上报：宿主据此调整窗口大小，避免出现空白边或裁切 */
@@ -139,12 +166,11 @@
   function setView(v) {
     if (v === view) {
       /* 已经在这个视图也要重画：首启时可能被 debug 参数提前设成 panel */
-      if (v === 'panel') { panelDirty = true; draw(); }
+      if (v === 'panel') draw();
       return;
     }
     view = v;
     lastSize = '';
-    if (v === 'panel') panelDirty = true;
     draw();
   }
 

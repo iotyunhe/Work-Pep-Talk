@@ -533,6 +533,7 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
       <tr><td>16</td><td>齿轮按钮可点</td><td>点挂件右上角齿轮 → 窗口由 300×221 变为面板高度；拖动只发生在卡片空白处，按钮上的点击不被拖窗吃掉</td></tr>
       <tr><td>17</td><td>小屏适配</td><td>工作区高度不足时面板内部滚动，底部「开始使用」仍可滚到可见区域，不被顶出屏幕</td></tr>
       <tr><td>18</td><td>图钉切换置顶</td><td>点右上角图钉 → 钉身由空心变实心（或反之），窗口置于最前/退出最前，<code>config.json</code> 的 <code>behaviour.alwaysOnTop</code> 同步翻转，托盘菜单的勾选状态一起变；重启后保持</td></tr>
+      <tr><td>19</td><td>面板输入不失焦</td><td>点开金额框后光标常驻，连续输入 <code>15000</code> 不打嗝；输入过程中日薪/时薪每秒跟着更新，但输入框节点不被替换（<code>document.activeElement</code> 仍是它，<code>:focus-within</code> 高亮不灭）。改背景色、切口径这类必须重绘的点击，只重建面板、保留滚动位置</td></tr>
     </tbody>
   </table>
 
