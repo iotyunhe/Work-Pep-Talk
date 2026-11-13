@@ -1,0 +1,264 @@
+/* =========================================================================
+ * 上班鼓励器 · 设置面板
+ * ---------------------------------------------------------------------
+ * 与挂件同宽（300px），点齿轮后窗口原地长高，视觉上是挂件「翻过来」。
+ * 配色独立于挂件主题：设置界面永远用纸白，不受当前背景色影响，
+ * 否则黑底主题下设置面板会变成一块黑砖，看不清也点不准。
+ * ========================================================================= */
+
+.panel {
+  width: 300px;
+  background: #FBFAF7;
+  border: 1px solid #E8E2D6;
+  border-radius: 16px;
+  box-shadow: 0 14px 34px rgba(74, 62, 48, .18), 0 2px 6px rgba(74, 62, 48, .07);
+  padding: 14px 16px 15px;
+  font-family: var(--sans);
+  color: #1E1C19;
+  /* 表单要能选中、能输入 */
+  user-select: text; -webkit-user-select: text;
+  cursor: default;
+  overflow: hidden;
+}
+
+/* --- 标题栏 */
+.pn-title {
+  display: flex; align-items: center;
+  margin-bottom: 12px;
+  cursor: grab;
+}
+.pn-title h3 {
+  font-family: var(--serif);
+  font-size: 15px; font-weight: 600;
+  letter-spacing: .02em;
+}
+.pn-x {
+  margin-left: auto;
+  width: 20px; height: 20px;
+  display: grid; place-items: center;
+  border-radius: 5px;
+  color: #B4AC9E; cursor: pointer;
+  font-family: var(--mono); font-size: 12px;
+  transition: background .15s, color .15s;
+}
+.pn-x:hover { background: #F0EBE0; color: #1E1C19; }
+
+/* --- 分组标签 */
+.pn-grp {
+  font-size: 9.5px; letter-spacing: .16em;
+  color: #8A8378;
+  margin: 13px 0 6px;
+}
+.pn-grp:first-of-type { margin-top: 0; }
+
+/* --- 口径切换 */
+.seg {
+  display: flex; gap: 2px;
+  background: #F0EBE0;
+  border-radius: 8px; padding: 3px;
+}
+.seg b {
+  flex: 1; text-align: center;
+  font-size: 11.5px; font-weight: 500;
+  padding: 5px 0; border-radius: 6px;
+  color: #8A8378; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.seg b:hover { color: #4A4640; }
+.seg b.on {
+  background: #fff; color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .07);
+}
+
+/* --- 金额输入 */
+.inp {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff; border: 1px solid #E8E2D6;
+  border-radius: 8px; padding: 7px 10px;
+  margin-top: 7px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.inp:focus-within {
+  border-color: #C9A38E;
+  box-shadow: 0 0 0 3px rgba(168, 68, 42, .08);
+}
+.inp span { font-size: 11.5px; color: #8A8378; flex: none; }
+.inp input {
+  flex: 1; min-width: 0;
+  border: none; outline: none; background: none;
+  font-family: var(--mono);
+  font-size: 15px; font-weight: 600;
+  color: #1E1C19; text-align: right;
+  padding: 0;
+}
+.inp em {
+  font-family: var(--mono); font-style: normal;
+  font-size: 10.5px; color: #8A8378; flex: none;
+}
+
+/* --- 折算结果 */
+.out { display: flex; gap: 7px; margin-top: 7px; }
+.out div {
+  flex: 1;
+  background: #fff; border: 1px solid #E8E2D6;
+  border-radius: 8px; padding: 6px 9px;
+}
+.out span {
+  display: block; font-size: 9px; letter-spacing: .08em;
+  color: #8A8378; line-height: 1.4;
+}
+.out b {
+  font-family: var(--mono);
+  font-size: 14px; font-weight: 600;
+  color: #1E1C19;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- 行式设置项 */
+.pn-line {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 6px;
+  font-size: 11.5px; color: #4A4640;
+}
+.pn-line .k {
+  width: 62px; flex: none;
+  color: #8A8378; font-size: 10.5px;
+}
+.pn-line .v {
+  font-family: var(--mono); font-size: 11px;
+  background: #fff; border: 1px solid #E8E2D6;
+  border-radius: 6px; padding: 3px 7px;
+  color: #1E1C19;
+}
+
+/* 时间输入：调大点方便点 */
+.pn-line input[type="time"] {
+  font-family: var(--mono); font-size: 11px;
+  background: #fff; border: 1px solid #E8E2D6;
+  border-radius: 6px; padding: 2px 5px;
+  color: #1E1C19; outline: none;
+  width: 82px;
+}
+.pn-line input[type="time"]:focus { border-color: #C9A38E; }
+
+/* 数字小输入 */
+.pn-num {
+  font-family: var(--mono); font-size: 11px;
+  background: #fff; border: 1px solid #E8E2D6;
+  border-radius: 6px; padding: 3px 6px;
+  color: #1E1C19; outline: none;
+  width: 46px; text-align: right;
+}
+.pn-num:focus { border-color: #C9A38E; }
+.pn-unit { font-size: 10px; color: #8A8378; }
+
+/* --- 复选框 */
+.chk {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: #4A4640;
+  margin-top: 8px; cursor: pointer;
+}
+.box {
+  width: 13px; height: 13px; flex: none;
+  border-radius: 3px;
+  border: 1.4px solid #C9C1B2;
+  display: grid; place-items: center;
+  transition: background .15s, border-color .15s;
+}
+.box.on { background: var(--accent); border-color: var(--accent); }
+.box.on::after {
+  content: "";
+  width: 4.5px; height: 2.5px;
+  border-left: 1.5px solid #fff;
+  border-bottom: 1.5px solid #fff;
+  transform: rotate(-45deg) translate(.5px, -1px);
+}
+
+/* --- 主题选择 */
+.thm-row { display: flex; gap: 6px; margin-top: 2px; }
+.thm {
+  flex: 1;
+  border: 1px solid #E8E2D6;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 4px 5px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .15s, background .15s;
+}
+.thm:hover { border-color: #D6CEC0; }
+.thm.on {
+  border-color: var(--accent);
+  background: #FDF6F2;
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.thm i {
+  display: block; height: 14px; border-radius: 3px;
+  margin-bottom: 3px;
+  background: #FBFAF7; border: 1px solid #E4DDCF;
+}
+.thm:nth-child(2) i { background: #fff; border-radius: 3px; }
+.thm:nth-child(3) i { background: #FFFDF6; border: 1.5px solid #1E1C19; border-radius: 2px; }
+.thm em {
+  font-style: normal; font-size: 9.5px;
+  color: #4A4640; letter-spacing: .04em;
+}
+.thm.on em { color: var(--accent); font-weight: 600; }
+
+/* --- 九色背景 */
+/*
+ * 单独占一整行，不跟左侧标签并排。
+ * 并排时标签吃掉 62px，剩下 200px 只放得下 8 个圆点，
+ * 十个（9 色 + 上传）会被挤成 8+2 两行，很难看。
+ */
+.sw-wrap { margin-top: 8px; }
+.sw-wrap .k {
+  display: block;
+  font-size: 10.5px; color: #8A8378;
+  margin-bottom: 6px;
+}
+.sw-row {
+  display: flex; align-items: center; gap: 5px;
+  flex-wrap: wrap;
+}
+.sw {
+  width: 19px; height: 19px; border-radius: 50%;
+  cursor: pointer; display: block;
+  border: 1px solid rgba(30, 28, 25, .14);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  transition: transform .12s;
+}
+.sw:hover { transform: scale(1.12); }
+.sw.on { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sw.up {
+  background: #fff; border: 1px dashed #C9C1B2;
+  color: #9A9386; font-size: 12px;
+  line-height: 17px; text-align: center;
+  font-family: var(--sans); position: relative; overflow: hidden;
+}
+.sw.up input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* --- 底部按钮 */
+.pn-foot {
+  display: flex; gap: 7px; margin-top: 14px;
+}
+.btn {
+  flex: 1;
+  font-family: var(--sans); font-size: 11.5px;
+  padding: 7px 0;
+  border-radius: 8px; border: 1px solid #E8E2D6;
+  background: #fff; color: #4A4640;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.btn:hover { background: #F5F1E8; }
+.btn.primary {
+  background: var(--accent); border-color: var(--accent);
+  color: #fff; font-weight: 600;
+}
+.btn.primary:hover { background: #963A23; }
+
+/* 极窄时的兜底 */
+@media (max-width: 260px) {
+  .pn-line .k { width: 50px; }
+}

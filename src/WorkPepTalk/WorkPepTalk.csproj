@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- 托盘图标用 WinForms 的 NotifyIcon，比手搓 Shell_NotifyIcon 稳 -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>WorkPepTalk</AssemblyName>
+    <RootNamespace>WorkPepTalk</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <Product>上班鼓励器</Product>
+    <Company>Work-Pep-Talk</Company>
+    <SatelliteResourceLanguages>zh-Hans;en</SatelliteResourceLanguages>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- 绿色版：不生成 pdb 附带文件，单文件发布见 publish.ps1 -->
+    <DebugType Condition="'$(Configuration)'=='Release'">none</DebugType>
+    <!--
+      WFAC010：WinForms 分析器要求把 DPI 设置从 manifest 挪到 Application.SetHighDpiMode。
+      但本应用是 WPF，WPF 只能靠 manifest 声明 PerMonitorV2；
+      WinForms 在这里只用于托盘 NotifyIcon，不涉及布局。故抑制。
+    -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    同时引用 WPF 与 WinForms 时，SDK 会把 System.Windows.Forms / System.Drawing
+    塞进隐式 using，导致 Application、MessageBox、Brush 全部二义。
+    这里直接摘掉，用到的地方在文件里显式 using 或写全名。
+  -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="wwwroot\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

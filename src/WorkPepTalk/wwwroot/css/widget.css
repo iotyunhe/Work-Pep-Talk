@@ -1,0 +1,313 @@
+/* =========================================================================
+ * 上班鼓励器 · 挂件样式
+ * ---------------------------------------------------------------------
+ * 只有挂件本体。演示页那套（桌面模拟、画廊、说明文字）不在这里。
+ *
+ * 颜色一律走 CSS 变量，由 JS 按背景色算出内联注入：
+ *   --wd-bg / --wd-ink / --wd-ink2 / --wd-ink3 / --wd-chip / --wd-track
+ *   --wd-line / --wd-edge / --wd-strong / --wd-fill
+ * 所以换背景不需要改这里，只换变量值。
+ * ========================================================================= */
+
+:root {
+  --sans: "Microsoft YaHei", "PingFang SC", -apple-system, sans-serif;
+  --serif: Georgia, "Songti SC", "SimSun", serif;
+  --mono: Consolas, "SFMono-Regular", Menlo, monospace;
+
+  --accent: #A8442A;
+  --teal: #2F6B5E;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/*
+ * 高度一律 auto，不写 100%。
+ * 窗口尺寸由 JS 上报内容高度、宿主再精确设窗 —— 所以这里必须让内容
+ * 自己决定多高。写 height:100% 会让 .wd 撑满当前视口，量不出真实高度。
+ */
+html, body {
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+  background: transparent;
+  -webkit-font-smoothing: antialiased;
+  cursor: default;
+}
+
+/* 整页不可选中：挂件是常驻物，误拖一片蓝比什么都烦 */
+body { user-select: none; -webkit-user-select: none; }
+
+#root { width: 100%; height: auto; }
+
+/* =================================================================== 挂件 */
+
+.wd {
+  position: relative;
+  width: 100%;
+  height: auto;
+  padding: 11px 14px 12px;
+  border-radius: 16px;
+  font-family: var(--sans);
+  color: var(--wd-ink3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* 拖拽由宿主处理，这里只宣告「这块可以拖」 */
+  cursor: grab;
+}
+.wd:active { cursor: grabbing; }
+
+/* --- 顶部：状态灯 + 悬停工具 */
+.wd-top {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px;
+  flex: none;
+}
+.wd-state {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; letter-spacing: .1em;
+  color: var(--wd-ink3);
+}
+.dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--teal); flex: none;
+}
+.dot.warn { background: #C98A5B; }
+.dot.off  { background: #C4BDB0; }
+
+.wd-tools {
+  margin-left: auto; display: flex; gap: 8px;
+  opacity: 0; transition: opacity .18s;
+}
+.wd:hover .wd-tools { opacity: 1; }
+.tool { display: block; line-height: 0; cursor: pointer; }
+.tool .ic {
+  width: 11px; height: 11px;
+  stroke: var(--wd-ink3); stroke-width: 1.5;
+  fill: none; stroke-linecap: round;
+  transition: stroke .15s;
+}
+.tool:hover .ic { stroke: var(--wd-ink); }
+
+/* --- 主数字 */
+.wd-main { display: flex; align-items: center; gap: 12px; flex: none; }
+.wd-ava {
+  width: 56px; height: 56px; flex: none;
+  border-radius: 14px;
+  display: grid; place-items: center;
+  overflow: hidden;
+  background: var(--wd-chip);
+}
+.ava-img { width: 100%; height: 100%; object-fit: contain; }
+
+.wd-money { min-width: 0; }
+.wd-cap {
+  font-size: 10px; letter-spacing: .16em;
+  color: var(--wd-ink3); line-height: 1.2;
+  margin-bottom: 1px;
+  display: flex; align-items: center; gap: 5px;
+}
+.lock {
+  font-size: 8.5px; letter-spacing: .04em;
+  color: var(--wd-fill);
+  border: 1px solid currentColor;
+  border-radius: 3px; padding: 0 3px;
+  line-height: 1.4; opacity: .85;
+}
+.wd-amt {
+  font-family: var(--serif);
+  font-size: 28px; font-weight: 600;
+  line-height: 1.06; letter-spacing: -.5px;
+  color: var(--wd-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wd-amt small {
+  font-size: 15px; font-weight: 500;
+  letter-spacing: 0; margin-right: 1px;
+}
+
+/* --- 日薪 / 时薪 */
+.wd-derive {
+  font-family: var(--mono);
+  font-size: 10.5px; letter-spacing: .01em;
+  color: var(--wd-ink3);
+  margin: 8px 0 0;
+  padding-top: 7px;
+  border-top: 1px dashed var(--wd-line);
+  flex: none;
+  white-space: nowrap;
+}
+.wd-derive b { color: var(--wd-ink2); font-weight: 600; }
+
+/* --- 两个小方块 */
+.wd-rows { display: flex; gap: 7px; margin-top: 8px; flex: none; }
+.rw {
+  flex: 1; border-radius: 8px;
+  padding: 4px 9px 5px;
+  background: var(--wd-chip);
+  min-width: 0;
+}
+.rw span {
+  display: block; font-size: 9.5px; letter-spacing: .08em;
+  color: var(--wd-ink3); line-height: 1.35;
+}
+.rw b {
+  font-family: var(--mono);
+  font-size: 13px; font-weight: 600;
+  letter-spacing: .01em;
+  color: var(--wd-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- 进度条 */
+.wd-bar {
+  height: 4px; border-radius: 4px;
+  margin: 9px 0 0;
+  overflow: hidden;
+  background: var(--wd-track);
+  flex: none;
+}
+.wd-bar i {
+  display: block; height: 100%;
+  background: var(--wd-fill);
+  transition: width .45s linear;
+}
+
+/* --- 底部一句话 */
+.wd-tip {
+  font-size: 11.5px; line-height: 1.45;
+  color: var(--wd-ink3);
+  margin-top: 9px;
+  flex: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =================================================== 主题 A · 纸质便签 */
+
+.wd-A {
+  background: var(--wd-bg);
+  border: 1px solid var(--wd-edge);
+  box-shadow: 0 10px 26px rgba(74, 62, 48, .16), 0 2px 5px rgba(74, 62, 48, .07);
+}
+.wd-A .wd-tip { font-family: var(--serif); font-size: 12px; }
+
+/* =================================================== 主题 B · 极简仪表 */
+
+.wd-B {
+  background: var(--wd-bg);
+  border: 1px solid var(--wd-edge);
+  border-radius: 12px;
+  padding-top: 13px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .09);
+}
+.wd-B .wd-ava { border-radius: 10px; width: 44px; height: 44px; }
+.wd-B .wd-amt { font-family: var(--mono); font-size: 25px; letter-spacing: -.8px; }
+.wd-B .wd-amt small { font-size: 14px; }
+.wd-B .wd-derive { border-top: 1px solid var(--wd-line); padding-top: 7px; }
+.wd-B .wd-rows { display: block; margin-top: 2px; }
+.wd-B .rw {
+  display: flex; justify-content: space-between; align-items: baseline;
+  background: none; border-radius: 0;
+  border-top: 1px solid var(--wd-line);
+  padding: 5px 1px 4px;
+}
+.wd-B .rw:first-child { border-top: none; }
+.wd-B .rw b { font-size: 12.5px; }
+/* B 的进度条压在卡片顶边，做成一条 2px 的「水位线」 */
+.wd-B .wd-bar {
+  position: absolute; left: 0; right: 0; top: 0;
+  height: 2px; border-radius: 0;
+  margin: 0;
+}
+.wd-B .wd-tip { font-size: 11px; padding-top: 6px; }
+
+/* =================================================== 主题 C · 像素小屋 */
+
+.wd-C {
+  background: var(--wd-bg);
+  border: 2px solid var(--wd-strong);
+  border-radius: 8px;
+  padding: 9px 11px 10px;
+  box-shadow: 4px 4px 0 var(--wd-strong);
+}
+.wd-C .wd-state { font-family: var(--mono); letter-spacing: .06em; color: var(--wd-ink); }
+.wd-C .wd-ava {
+  border: 1.5px solid var(--wd-strong);
+  border-radius: 4px;
+  width: 50px; height: 50px;
+}
+.wd-C .wd-amt { font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: -.5px; }
+.wd-C .wd-amt small { font-size: 13px; }
+.wd-C .wd-derive { border-top: 1.5px dashed var(--wd-line); }
+.wd-C .rw { border: 1.5px solid var(--wd-strong); border-radius: 3px; }
+.wd-C .wd-bar {
+  background: var(--wd-track);
+  border: 1.5px solid var(--wd-strong);
+  height: 7px; border-radius: 2px;
+}
+.wd-C .wd-tip { font-family: var(--mono); font-size: 10px; line-height: 1.5; }
+
+/* =================================================== 自定义背景图 */
+
+/*
+ * 图片垫在底下，上面盖一层 74% 的半透明底衬 + 18px 毛玻璃。
+ * 这样再花的照片也吃不掉数字，同时还能看见图。
+ */
+.wd-photo::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: var(--wd-photo);
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+.wd-photo::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: rgba(251, 250, 247, .74);
+  backdrop-filter: blur(18px) saturate(1.15);
+  z-index: 0;
+}
+.wd-photo > * { position: relative; z-index: 1; }
+.wd-photo { border-color: rgba(255, 255, 255, .55); }
+
+/* =================================================== 收起态圆球 */
+
+.ball {
+  position: relative;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  cursor: pointer;
+  background: #FBFAF7;
+  border: 1px solid #E8E2D6;
+  box-shadow: 0 8px 20px rgba(74, 62, 48, .2);
+  transition: transform .15s;
+}
+.ball:hover { transform: scale(1.04); }
+.ball svg { width: 34px; height: 34px; }
+.ball-badge {
+  position: absolute; right: -8px; bottom: -5px;
+  background: var(--accent); color: #fff;
+  font-family: var(--mono); font-size: 9px;
+  padding: 1px 5px; border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(168, 68, 42, .4);
+  white-space: nowrap;
+}
+.ball-C { border-radius: 6px; border: 2px solid #1E1C19; box-shadow: 3px 3px 0 #1E1C19; }
+.ball-B { border-radius: 12px; }
+
+/* =================================================== 浮层公共 */
+
+/* 数字每秒跳一次，这层淡入淡出专门给「改了工资」用 */
+.flash { animation: flash .5s ease-out; }
+@keyframes flash {
+  0%   { background: rgba(47, 107, 94, .16); }
+  100% { background: transparent; }
+}
+
+/* 收起态窗口比圆球大一圈，留出角标的位置；圆球居中，不贴着左上角 */
+#root.v-ball { padding: 10px; }

@@ -2,6 +2,8 @@
 Thumbs.db
 desktop.ini
 .DS_Store
+.vs/
+.idea/
 
 # WorkBuddy 工作区数据
 .workbuddy/
@@ -13,6 +15,19 @@ build/
 release/
 *.log
 
-# 设计稿临时截图
+# .NET 构建中间产物
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+
+# 运行期生成物（绿色版靠这几个文件工作，但不该进仓库）
+src/WorkPepTalk/config.json
+src/WorkPepTalk/config.bad-*.json
+src/WorkPepTalk/app.log
+src/WorkPepTalk/WebView2Data/
+publish/
+
+# 调试与校对用的临时截图
 _*.png
 _*.html
