@@ -79,6 +79,13 @@
 
   /* 只改数字，不动结构 */
   function patch() {
+    /*
+     * 未设置时界面上根本没有真实数字可更新（金额、日薪、时薪都是占位符），
+     * 这里直接跳过 —— 否则每秒都会把「—」覆盖成基于占位工资算出来的假数字。
+     * 用户填完之后由 applyConfig / setView 触发整块重绘。
+     */
+    if (cfg.setupDone === false) return;
+
     const c = compute();
     const mood = Core.moodOf(c);
 
@@ -123,12 +130,34 @@
 
   /* ------------------------------------------------------------ 视图切换 */
 
+  /*
+   * firstRun：本次面板打开是不是「第一次使用」的引导。
+   * 面板据此把必填项标出来、把主按钮换成「开始使用」。
+   */
+  let firstRun = false;
+
   function setView(v) {
-    if (v === view) return;
+    if (v === view) {
+      /* 已经在这个视图也要重画：首启时可能被 debug 参数提前设成 panel */
+      if (v === 'panel') { panelDirty = true; draw(); }
+      return;
+    }
     view = v;
     lastSize = '';
     if (v === 'panel') panelDirty = true;
     draw();
+  }
+
+  function openSettings(isFirstRun) {
+    firstRun = !!isFirstRun;
+    setView('panel');
+    host.send({ type: 'openSettings' });
+  }
+
+  function closeSettings() {
+    firstRun = false;
+    setView('widget');
+    host.send({ type: 'closeSettings' });
   }
 
   /* ------------------------------------------------------------ 交互 */
@@ -138,21 +167,31 @@
     if (!act) return;
     const a = act.getAttribute('data-act');
 
-    if (a === 'settings') { setView('panel'); host.send({ type: 'openSettings' }); }
+    if (a === 'settings') { openSettings(false); }
     else if (a === 'collapse') { setView('ball'); host.send({ type: 'collapse' }); }
     else if (a === 'expand') { setView('widget'); host.send({ type: 'expand' }); }
+    /* 面板里的关闭按钮走这里，跟 panel.js 里的处理取同一个出口 */
+    else if (a === 'closePanel') { closeSettings(); }
   });
 
   /*
    * 拖动：交给宿主的系统级拖窗循环（ReleaseCapture + WM_NCLBUTTONDOWN）。
-   * 不去模拟鼠标位置，那样在 150% 缩放下会漂。
-   * 按钮、输入框、色板这些交互元素不触发拖动。
+   *
+   * 那个调用是同步且模态的 —— SendMessage 要一直等到用户松开左键才返回。
+   * 一旦在某个元素上按下鼠标就触发拖窗，那个元素的 mouseup 和 click 会被
+   * 整段吞掉，表现出来就是「按钮点了没反应」。
+   *
+   * 所以排除列表必须覆盖「凡是可以点的东西」，不能只列少数几个标签名。
+   * data-act 是页面里所有可点元素的统一标记（设置、收起、展开、面板里的
+   * 关闭与复位），将来新加按钮只要带上它，就自动不会再被拖窗吃掉。
    */
+  const NO_DRAG = '[data-act], [data-nodrag], input, textarea, select, a, button, label, .pn-x';
+
   document.addEventListener('mousedown', function (e) {
     if (e.button !== 0) return;
-    if (e.target.closest('[data-nodrag]')) return;
-    if (e.target.closest('input, textarea, select, a, button')) return;
-    if (view === 'panel' && e.target.closest('.panel')) return;
+    if (e.target.closest(NO_DRAG)) return;
+    /* 面板视图整个窗口就是面板，全是控件，没有可拖的空白 */
+    if (view === 'panel') return;
     host.send({ type: 'drag' });
   });
 
@@ -164,12 +203,23 @@
 
   /* ------------------------------------------------------------ 配置 */
 
-  function applyConfig(raw) {
+  function applyConfig(raw, opts) {
     cfg = Core.normalize(raw);
     lastMood = null;
     lastSize = '';
     host.send({ type: 'bgColor', color: windowBackground() });
-    draw();
+    if (!opts || !opts.skipDraw) draw();
+  }
+
+  /*
+   * 首次使用判定：从未落过 setup.done 就认为没设置过。
+   * 两种例外 —— 调试参数指定了 setup，或者压根没有宿主（直接用浏览器
+   * 打开 index.html 调界面），都不弹引导，否则开发时每次刷新都被挡住。
+   */
+  function needFirstRun(raw) {
+    if (dbg.has('setup')) return false;
+    if (!hasHost) return false;
+    return !(raw && raw.setup && raw.setup.done === true);
   }
 
   /*
@@ -184,7 +234,26 @@
 
   window.App = {
     setView: setView,
+    openSettings: openSettings,
+    closeSettings: closeSettings,
+    /* 面板用它决定要不要显示引导条、要不要把主按钮换成「开始使用」 */
+    isFirstRun: function () { return firstRun; },
+    isConfigured: function () { return cfg.setupDone !== false; },
     applyConfig: applyConfig,
+    /*
+     * 用户亲手填过工资 → 从此不再算「未设置」。
+     * 刻意不重绘面板：这个方法会在用户打字过程中被调用，
+     * 重绘会把输入框整个换掉、焦点丢失，一个字都打不完整。
+     * 关掉面板时 setView('widget') 自然会用新状态重绘挂件。
+     */
+    markConfigured: function () {
+      if (cfg.setupDone) return;
+      const raw = currentRaw();
+      if (!raw.setup) raw.setup = {};
+      raw.setup.done = true;
+      cfg = Core.normalize(raw);
+      host.send({ type: 'save', config: raw });
+    },
     /*
      * 设置面板改完配置后回灌。
      * opts.silent = true 时只重算、不重绘面板 —— 否则用户每敲一个数字，
@@ -245,6 +314,9 @@
       const m = /^(\d{1,2}):(\d{2})$/.exec(at);
       if (m) fakeMin = (+m[1]) * 60 + (+m[2]);
     }
+
+    /* setup=1 强制「已设置」看真实挂件，setup=0 强制「未设置」看引导态 */
+    if (dbg.has('setup')) cfg.setupDone = dbg.get('setup') !== '0';
   }
 
   host.onMessage(function (msg) {
@@ -252,9 +324,21 @@
 
     if (msg.type === 'config') {
       rawCache = msg.config ? deepClone(msg.config) : deepClone(Core.DEFAULT_CONFIG);
-      applyConfig(rawCache);
-      if (msg.view) setView(msg.view);
+
+      /* 宿主告诉这块屏幕能放下多高的面板，小屏时面板内部滚动 */
+      if (msg.maxPanelH) {
+        document.documentElement.style.setProperty('--max-panel-h', msg.maxPanelH + 'px');
+      }
+
+      const first = needFirstRun(rawCache);
+
+      /* 首启时跳过中间那帧挂件，避免窗口先按挂件尺寸出现再弹大 */
+      applyConfig(rawCache, { skipDraw: true });
       applyDebugParams();
+
+      if (first) openSettings(true);
+      else if (msg.view) setView(msg.view);
+
       lastSize = '';
       draw();
     } else if (msg.type === 'setView') {

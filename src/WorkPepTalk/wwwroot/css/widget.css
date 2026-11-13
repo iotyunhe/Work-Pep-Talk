@@ -77,10 +77,16 @@ body { user-select: none; -webkit-user-select: none; }
 
 .wd-tools {
   margin-left: auto; display: flex; gap: 8px;
-  opacity: 0; transition: opacity .18s;
+  /* 常驻可见但压得住。原来是 opacity:0 只在悬停显形 —— 用户根本不知道
+     右上角有设置入口，这也是「点了没反应」体感的一部分。 */
+  opacity: .42; transition: opacity .18s;
 }
 .wd:hover .wd-tools { opacity: 1; }
-.tool { display: block; line-height: 0; cursor: pointer; }
+.tool {
+  display: block; line-height: 0; cursor: pointer;
+  /* 图标 11px，热区撑到 17px：手指和触控板都更容易命中 */
+  padding: 3px; margin: -3px;
+}
 .tool .ic {
   width: 11px; height: 11px;
   stroke: var(--wd-ink3); stroke-width: 1.5;
@@ -126,6 +132,23 @@ body { user-select: none; -webkit-user-select: none; }
   font-size: 15px; font-weight: 500;
   letter-spacing: 0; margin-right: 1px;
 }
+
+/* ---------------------------------------------------------------------
+   未设置状态：用户还没填过自己的工资。
+   这时候卡片上的金额、日薪、时薪、时间全是占位，必须一眼看出「还没数」，
+   而不是让人误以为 ¥190.91 是自己今天的收入。
+   --------------------------------------------------------------------- */
+.wd-amt .dash {
+  font-size: 26px; font-weight: 500;
+  letter-spacing: .06em;
+  color: var(--wd-ink3);
+  font-variant-numeric: normal;
+}
+.st-unset .wd-amt { opacity: .9; }
+.st-unset .wd-bar i { background: var(--wd-ink3); opacity: .25; }
+/* 引导那句用正文色，比平时更显眼一点 —— 这张卡现在唯一的正事就是引导去设置 */
+.st-unset .wd-tip { color: var(--wd-ink2); opacity: 1; }
+.st-unset .wd-derive b { color: var(--wd-ink3); }
 
 /* --- 日薪 / 时薪 */
 .wd-derive {

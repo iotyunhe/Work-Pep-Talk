@@ -440,6 +440,7 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
   <h3>7.2 配置契约</h3>
 <pre>{
   <span class="s">"version"</span>: 1,
+  <span class="s">"setup"</span>: { <span class="s">"done"</span>: <span class="k">false</span> },
   <span class="s">"pay"</span>: { <span class="s">"mode"</span>: <span class="s">"monthly"</span>, <span class="s">"value"</span>: <span class="n">8000</span>,
            <span class="s">"daysPerMonth"</span>: <span class="n">22</span>, <span class="s">"hoursPerDay"</span>: <span class="n">8</span> },
   <span class="s">"schedule"</span>: { <span class="s">"start"</span>: <span class="s">"09:00"</span>, <span class="s">"end"</span>: <span class="s">"18:00"</span>,
@@ -455,6 +456,8 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
 }</pre>
 
   <p>读取失败或版本不认识时，<strong>先备份成 <code>config.bak.json</code>，再用默认值重建</strong>，绝不因为一个坏文件让应用起不来。写入用「临时文件 + 原子替换」，避免断电写坏。</p>
+
+  <p><code>setup.done</code> 是首次使用的开关。<code>false</code> 时，<code>pay</code> 里的 8000 / 22 / 8 只是让程序能起来的<strong>占位值</strong>：界面一律显示「未设置 · ¥— · --:--:--」，启动直接打开设置面板引导填写，绝不拿占位数冒充用户收入。用户在金额框里真的输入过内容、或点了「开始使用」，才置为 <code>true</code> 落盘；此后启动不再打扰。</p>
 
   <h3>7.3 关键实现要点</h3>
   <ul>
@@ -526,6 +529,9 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
       <tr><td>12</td><td>资源占用</td><td>空闲 CPU &lt; 1%，内存 &lt; 80MB</td></tr>
       <tr><td>13</td><td>夜班 22:00–06:00</td><td>23:00 显示进度正常；次日 02:00 仍属同一班次</td></tr>
       <tr><td>14</td><td>单文件分发</td><td>只把 <code>WorkPepTalk.exe</code> 拷到一台干净机器，双击能显示出挂件；同级目录只多出 config.json、app.log、WebView2Data</td></tr>
+      <tr><td>15</td><td>首次使用引导</td><td>删掉 <code>config.json</code> 启动 → 直接弹出设置面板并高亮金额格，折算结果与挂件都是 <code>¥—</code>；填 15000 点「开始使用」→ 挂件显示日薪 681.82 / 时薪 85.23；重启不再弹面板</td></tr>
+      <tr><td>16</td><td>齿轮按钮可点</td><td>点挂件右上角齿轮 → 窗口由 300×221 变为面板高度；拖动只发生在卡片空白处，按钮上的点击不被拖窗吃掉</td></tr>
+      <tr><td>17</td><td>小屏适配</td><td>工作区高度不足时面板内部滚动，底部「开始使用」仍可滚到可见区域，不被顶出屏幕</td></tr>
     </tbody>
   </table>
 

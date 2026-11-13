@@ -18,8 +18,24 @@
   /* 表单要能选中、能输入 */
   user-select: text; -webkit-user-select: text;
   cursor: default;
-  overflow: hidden;
+  /*
+   * 高度上限由宿主按当前屏幕工作区算好传进来（--max-panel-h）。
+   * 超过就在面板内部滚动，而不是把「开始使用」顶到屏幕外。
+   * 变量没拿到时退回 880，总比不限高强。
+   */
+  max-height: var(--max-panel-h, 880px);
+  overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain;
 }
+
+/* 细滚动条：面板很窄，默认滚动条会吃掉 17px 的可用宽度 */
+.panel::-webkit-scrollbar { width: 7px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb {
+  background: #DED6C7; border-radius: 4px;
+  border: 2px solid #FBFAF7;
+}
+.panel::-webkit-scrollbar-thumb:hover { background: #C7BCA8; }
 
 /* --- 标题栏 */
 .pn-title {
@@ -192,13 +208,29 @@
   background: #FDF6F2;
   box-shadow: 0 0 0 1px var(--accent) inset;
 }
+/*
+ * 预览块里放一小段金额，用各主题的真实字形渲染。
+ * 原来只是一块底色（纸白 / 纯白 / 米黄），在白底面板上三者几乎没差别，
+ * 看上去就是三个空框，用户没法从预览判断「纸质 / 仪表 / 像素」是什么。
+ */
 .thm i {
-  display: block; height: 14px; border-radius: 3px;
-  margin-bottom: 3px;
+  display: grid; place-items: center;
+  height: 18px; border-radius: 3px;
+  margin-bottom: 4px;
+  font-size: 9.5px; line-height: 1; font-style: normal;
+  font-variant-numeric: tabular-nums;
   background: #FBFAF7; border: 1px solid #E4DDCF;
+  color: #6B6357;
 }
-.thm:nth-child(2) i { background: #fff; border-radius: 3px; }
-.thm:nth-child(3) i { background: #FFFDF6; border: 1.5px solid #1E1C19; border-radius: 2px; }
+/* 纸质：衬线、字距收紧 */
+.thm:nth-child(1) i { font-family: var(--serif); letter-spacing: -.3px; }
+/* 仪表：等宽、对齐 */
+.thm:nth-child(2) i { font-family: var(--mono); background: #fff; letter-spacing: .5px; }
+/* 像素：硬边、无抗锯齿的块状感 */
+.thm:nth-child(3) i {
+  font-family: var(--mono); letter-spacing: -1.2px;
+  background: #FFFDF6; border: 1.5px solid #1E1C19; color: #1E1C19;
+}
 .thm em {
   font-style: normal; font-size: 9.5px;
   color: #4A4640; letter-spacing: .04em;
@@ -257,6 +289,36 @@
   color: #fff; font-weight: 600;
 }
 .btn.primary:hover { background: #963A23; }
+
+/* ---------------------------------------------------------------------
+   首次使用引导
+   只在 setup.done 为 false 时出现；用户填过金额之后不会再出现。
+   --------------------------------------------------------------------- */
+.pn-guide {
+  display: flex; flex-direction: column; gap: 3px;
+  margin: 0 0 12px;
+  padding: 9px 11px 10px;
+  background: #FCF4EE;
+  border: 1px solid #EED9C9;
+  border-left: 3px solid var(--accent);
+  border-radius: 7px;
+}
+.pn-guide b {
+  font-size: 11.5px; font-weight: 600;
+  color: var(--accent); letter-spacing: .02em;
+}
+.pn-guide span {
+  font-size: 11px; line-height: 1.55; color: #6B6357;
+}
+
+/* 首启时把金额这一格拎出来：工时和时段用默认值还能接受，工资必须是他的真数 */
+.inp.need {
+  border-color: #E2B69C;
+  background: #FFFDFB;
+}
+.inp.need span { color: var(--accent); font-weight: 600; }
+
+/* 首启只有「开始使用」一个按钮，.btn 本身 flex:1，自然占满整行 */
 
 /* 极窄时的兜底 */
 @media (max-width: 260px) {

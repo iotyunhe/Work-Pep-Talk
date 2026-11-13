@@ -145,14 +145,26 @@
    */
   function widget(c, cfg, opts) {
     opts = opts || {};
-    const mood = Core.moodOf(c);
+
+    /*
+     * 首次使用：内置的 8000 元 / 22 天 / 8 小时只是让程序能起来的占位数。
+     * 在用户亲手填过之前，一个数字都不许往界面上放 —— 否则他会以为
+     * 「今天已赚 ¥190.91」是自己的真实收入。
+     */
+    const needSetup = cfg.setupDone === false;
+
+    const mood = needSetup ? 'before' : Core.moodOf(c);
     const m = MOODS[mood];
     const isOt = c.phase === 'overtime';
-    const dotCls = m.dot === 'ok' ? '' : m.dot;
+    const dotCls = needSetup ? 'off' : (m.dot === 'ok' ? '' : m.dot);
+    /* 没设置时标签也要跟着改，不能说「距下班」却给个空值 */
+    const stateText = needSetup ? '未设置' : m.state;
 
-    const tip = isOt
-      ? '加班 ' + Core.hms(c.otSec) + '，这段时间没有钱。'
-      : m.text;
+    const tip = needSetup
+      ? '还没填工资。点右上角齿轮，一分钟就好。'
+      : isOt
+        ? '加班 ' + Core.hms(c.otSec) + '，这段时间没有钱。'
+        : m.text;
 
     /* 背景：自定义图时挂 .wd-photo，走毛玻璃衬底，token 固定用白底那套 */
     const usePhoto = cfg.background === 'photo' && !!cfg.bgImage;
@@ -169,12 +181,13 @@
 
     return '' +
       '<div class="wd wd-' + cfg.theme + (usePhoto ? ' wd-photo' : '') +
-      ' st-' + mood + (opts.compact ? ' compact' : '') + '" style="' + bgStyle + '">' +
+      ' st-' + mood + (needSetup ? ' st-unset' : '') + (opts.compact ? ' compact' : '') +
+      '" style="' + bgStyle + '">' +
         '<div class="wd-top">' +
-          '<span class="wd-state"><i class="dot ' + dotCls + '"></i>' + m.state + '</span>' +
+          '<span class="wd-state"><i class="dot ' + dotCls + '"></i>' + stateText + '</span>' +
           '<span class="wd-tools">' +
-            '<span class="tool" data-act="settings" title="设置">' + ICON_GEAR + '</span>' +
-            '<span class="tool" data-act="collapse" title="收起">' + ICON_FOLD + '</span>' +
+            '<span class="tool" data-act="settings" data-nodrag title="设置">' + ICON_GEAR + '</span>' +
+            '<span class="tool" data-act="collapse" data-nodrag title="收起">' + ICON_FOLD + '</span>' +
           '</span>' +
         '</div>' +
 
@@ -182,21 +195,26 @@
           '<div class="wd-ava">' + avatar(mood, cfg.theme, cfg) + '</div>' +
           '<div class="wd-money">' +
             '<div class="wd-cap">今天已赚' +
-              (isOt ? '<span class="lock">已锁定</span>' : '') +
+              (isOt && !needSetup ? '<span class="lock">已锁定</span>' : '') +
             '</div>' +
-            '<div class="wd-amt"><small>¥</small>' + amt + '</div>' +
+            '<div class="wd-amt">' +
+              (needSetup ? '<span class="dash">—</span>' : '<small>¥</small>' + amt) +
+            '</div>' +
           '</div>' +
         '</div>' +
 
-        '<div class="wd-derive">日薪 <b>¥' + Core.yuan(c.daily) +
-          '</b> · 时薪 <b>¥' + Core.yuan(c.hourly) + '</b></div>' +
+        '<div class="wd-derive">日薪 <b>' + (needSetup ? '¥—' : '¥' + Core.yuan(c.daily)) +
+          '</b> · 时薪 <b>' + (needSetup ? '¥—' : '¥' + Core.yuan(c.hourly)) + '</b></div>' +
 
         '<div class="wd-rows">' +
-          '<div class="rw"><span>已工作</span><b>' + Core.hms(c.deskSec) + '</b></div>' +
-          '<div class="rw"><span>' + rightLabel + '</span><b>' + rightValue + '</b></div>' +
+          '<div class="rw"><span>已工作</span><b>' +
+            (needSetup ? '--:--:--' : Core.hms(c.deskSec)) + '</b></div>' +
+          '<div class="rw"><span>' + (needSetup ? '距下班' : rightLabel) + '</span><b>' +
+            (needSetup ? '--:--:--' : rightValue) + '</b></div>' +
         '</div>' +
 
-        '<div class="wd-bar"><i style="width:' + (c.progress * 100).toFixed(1) + '%"></i></div>' +
+        '<div class="wd-bar"><i style="width:' +
+          (needSetup ? 0 : (c.progress * 100).toFixed(1)) + '%"></i></div>' +
         '<div class="wd-tip">' + tip + '</div>' +
       '</div>';
   }
@@ -206,10 +224,11 @@
   /* 56px 圆球，右下角带今日金额角标。点一下展开。 */
   function ball(c, cfg) {
     const theme = cfg ? cfg.theme : 'A';
+    const badge = (cfg && cfg.setupDone === false) ? '—' : '¥' + Core.yuan(c.earned);
     return '' +
-      '<div class="ball ball-' + theme + '" data-act="expand" title="展开">' +
-        avatar(Core.moodOf(c), theme, cfg) +
-        '<span class="ball-badge">¥' + Core.yuan(c.earned) + '</span>' +
+      '<div class="ball ball-' + theme + '" data-act="expand" data-nodrag title="展开">' +
+        avatar(cfg && cfg.setupDone === false ? 'before' : Core.moodOf(c), theme, cfg) +
+        '<span class="ball-badge">' + badge + '</span>' +
       '</div>';
   }
 

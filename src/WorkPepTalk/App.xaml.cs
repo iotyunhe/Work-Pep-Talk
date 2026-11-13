@@ -46,6 +46,7 @@ public partial class App : System.Windows.Application
                 "--theme" => "theme",
                 "--bg" => "bg",
                 "--at" => "at",
+                "--setup" => "setup",
                 _ => null
             };
             if (key is not null) qs.Add(key + "=" + Uri.EscapeDataString(e.Args[++i]));
@@ -62,12 +63,14 @@ public partial class App : System.Windows.Application
 
 #if DEBUG
         /* --shot <png> ：等页面稳定后自截一张再退出，仅调试构建可用。
-           用来核对像素级布局，不用去截屏打扰用户桌面。 */
+           用来核对像素级布局，不用去截屏打扰用户桌面。
+           --click <x> <y> 可先派发一次真实点击，用来验证按钮是否真的能点开。 */
         var idx = Array.IndexOf(e.Args, "--shot");
         if (idx >= 0 && idx + 1 < e.Args.Length)
         {
             var outPath = e.Args[idx + 1];
-            _ = CaptureAndQuitAsync(win, outPath, EvalFromArgs(e.Args));
+            var (cx, cy) = ClickFromArgs(e.Args);
+            _ = CaptureAndQuitAsync(win, outPath, EvalFromArgs(e.Args), cx, cy);
         }
 #endif
     }
@@ -79,7 +82,16 @@ public partial class App : System.Windows.Application
         return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
     }
 
-    private static async Task CaptureAndQuitAsync(MainWindow win, string outPath, string? evalJs)
+    private static (double? x, double? y) ClickFromArgs(string[] args)
+    {
+        var i = Array.IndexOf(args, "--click");
+        if (i < 0 || i + 2 >= args.Length) return (null, null);
+        return double.TryParse(args[i + 1], out var x) && double.TryParse(args[i + 2], out var y)
+            ? (x, y) : (null, null);
+    }
+
+    private static async Task CaptureAndQuitAsync(
+        MainWindow win, string outPath, string? evalJs, double? cx = null, double? cy = null)
     {
         try
         {
@@ -96,6 +108,17 @@ public partial class App : System.Windows.Application
                 var r = await win.EvalAsync(evalJs);
                 Log.Info("执行 JS → " + r);
                 await Task.Delay(1200);      // 等界面按新配置重绘完
+            }
+
+            if (cx is { } px && cy is { } py)
+            {
+                /* 记下点击前的窗口尺寸，点完之后再记一次 —— 面板比挂件高得多，
+                   尺寸变了就说明按钮真的被点开了。 */
+                Log.Info($"点击前窗口 {win.Width:0.#}x{win.Height:0.#}");
+                await win.ClickAsync(px, py);
+                await Task.Delay(1500);
+                Log.Info($"点击后窗口 {win.Width:0.#}x{win.Height:0.#}");
+                await Task.Delay(400);
             }
 
             var p = await win.CaptureAsync(outPath);

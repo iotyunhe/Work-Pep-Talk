@@ -455,10 +455,30 @@ public partial class MainWindow : Window
         {
             type = "config",
             config = _store.Current,
-            view = _store.Current.Window.Collapsed ? "ball" : "widget"
+            view = _store.Current.Window.Collapsed ? "ball" : "widget",
+            maxPanelH = MaxPanelHeightDip()
         }, JsonOpts);
 
         Web.CoreWebView2?.PostWebMessageAsJson(payload);
+    }
+
+    /*
+     * 设置面板可用的最大高度（DIP）。
+     * 面板的自然高度约 780，在 1440p 上放得下，但 1366×768 的笔记本
+     * 工作区只有 ~570 DIP —— 不加限制的话底部「开始使用」会被顶出屏幕，
+     * 用户改完设置却按不到确认。页面拿到这个值后给面板设 max-height 内部滚动。
+     */
+    private double MaxPanelHeightDip()
+    {
+        try
+        {
+            var h = WorkAreaDip().Height - 40;   // 留出边距，别贴着任务栏
+            return h >= 320 ? h : 320;
+        }
+        catch
+        {
+            return 820;
+        }
     }
 
     private static readonly JsonSerializerOptions JsonOpts = new()
@@ -746,6 +766,37 @@ public partial class MainWindow : Window
     {
         if (Web.CoreWebView2 is null) return "(未就绪)";
         return await Web.CoreWebView2.ExecuteScriptAsync(js);
+    }
+
+    /// <summary>
+    /// 调试用：在页面坐标 (x, y) 处派发一次完整鼠标点击。
+    ///
+    /// 走浏览器内核的输入管线，mousedown → mouseup → click 三个事件都会真实触发 ——
+    /// 这点很关键：如果 mousedown 期间触发了系统级拖窗循环（SendMessage 模态），
+    /// click 就会被吞掉，而只有这种真实事件序列能暴露该问题。
+    ///
+    /// 不碰系统光标，所以不会打扰正在用电脑的人，也不受 DPI 虚拟化影响。
+    /// </summary>
+    public async Task ClickAsync(double x, double y)
+    {
+        var core = Web.CoreWebView2;
+        if (core is null) return;
+
+        var steps = new[]
+        {
+            new { type = "mouseMoved",    x, y, button = "none", buttons = 0, clickCount = 0 },
+            new { type = "mousePressed",  x, y, button = "left", buttons = 1, clickCount = 1 },
+            new { type = "mouseReleased", x, y, button = "left", buttons = 0, clickCount = 1 }
+        };
+
+        foreach (var s in steps)
+        {
+            await core.CallDevToolsProtocolMethodAsync(
+                "Input.dispatchMouseEvent", JsonSerializer.Serialize(s));
+            await Task.Delay(45);
+        }
+
+        Log.Info($"已派发点击 ({x:0.#}, {y:0.#})");
     }
 #endif
 }

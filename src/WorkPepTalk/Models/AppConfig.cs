@@ -9,6 +9,7 @@ namespace WorkPepTalk.Models;
 public sealed class AppConfig
 {
     public int Version { get; set; } = 1;
+    public SetupConfig Setup { get; set; } = new();
     public PayConfig Pay { get; set; } = new();
     public ScheduleConfig Schedule { get; set; } = new();
     public LookConfig Look { get; set; } = new();
@@ -16,6 +17,15 @@ public sealed class AppConfig
     public BehaviourConfig Behaviour { get; set; } = new();
 
     public static AppConfig Default() => new();
+}
+
+/// <summary>
+/// 首次引导的状态。Pay 里的 8000/22/8 只是占位值，Done 为 false 时
+/// 界面显示「未设置」而不是把这些占位数当成用户收入展示出来。
+/// </summary>
+public sealed class SetupConfig
+{
+    public bool Done { get; set; }
 }
 
 public sealed class PayConfig

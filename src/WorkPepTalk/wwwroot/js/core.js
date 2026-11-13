@@ -38,6 +38,14 @@
   /* 默认配置。字段与 config.json 契约一一对应 */
   const DEFAULT_CONFIG = {
     version: 1,
+    /*
+     * done = 用户是否亲手填过自己的工资。
+     * 内置的 8000/22/8 只是让程序能起来的占位值，不是用户的数据 ——
+     * 在 done 变 true 之前，界面一律显示「未设置」，绝不拿占位数冒充用户收入。
+     */
+    setup: {
+      done: false
+    },
     pay: {
       mode: 'monthly',      // monthly | daily | hourly
       value: 8000,
@@ -129,6 +137,10 @@
              : bgIds.indexOf(look.background) >= 0 ? look.background : 'white';
 
     return {
+      /* 只有明确的 true 才算填过。缺字段、写错类型一律当"没设置" —— 
+         这个判断决定界面是显示真实数字还是「未设置」，不能从宽。 */
+      setupDone: !!(r.setup && r.setup.done === true),
+
       mode: mode,
       value: value,
       daysPerMonth: daysPerMonth,

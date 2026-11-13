@@ -131,6 +131,24 @@ git push
 
 ---
 
+## 首次使用
+
+第一次打开时**不会**直接显示一个算好的金额，而是弹出设置面板让你填。
+
+原因很直接：程序里内置的 8000 元 / 22 天 / 8 小时只是让它能起来的占位值。如果照直接展示，你会看到「今天已赚 ¥190.91」——那不是你的收入，是别人的默认值。所以在 `setup.done` 变成 `true` 之前，挂件显示的是：
+
+```
+未设置                    ¥ —        日薪 ¥— · 时薪 ¥—
+已工作 --:--:--        距下班 --:--:--
+还没填工资。点右上角齿轮，一分钟就好。
+```
+
+只要在金额框里真的输入过内容，或在面板里点过「开始使用」，就算完成配置，此后启动直接进挂件，不再打扰。只关掉面板不动数值，下次启动仍然会引导 —— 因为那时你还没有自己的数字。
+
+想重新走一遍引导，删掉 `config.json` 重启即可。
+
+---
+
 ## 发给别人之前，需要知道的四件事
 
 1. **目标机要求**：Windows 10 1809+ / Windows 11，64 位。界面跑在 WebView2 里，需要 WebView2 运行时 —— Win11 和国内绝大多数 Win10 都随 Edge 自带。真缺了程序会弹窗说明并给出微软官方下载页，不会静默白屏。
@@ -190,6 +208,22 @@ git push
 `config.json` 放在 exe 同级目录，不写注册表、不写 AppData。整个文件夹拷到 U 盘，设置跟着走。
 
 文件损坏时自动备份成 `config.bad-<时间戳>.json` 并用默认配置重建 —— 绝不因为一个坏 JSON 就起不来。
+
+`setup.done` 是首次使用的开关：`false` 时 `pay` 里的数字只当占位，界面显示「未设置」并弹引导面板；用户在金额框输入过、或点了「开始使用」才置为 `true`。手改这个值可以强制重走引导。
+
+---
+
+## 调试入口（仅 Debug 构建）
+
+```bash
+WorkPepTalk.exe --shot out.png --at 14:12      # 按指定时刻渲染并截图后退出
+WorkPepTalk.exe --shot out.png --setup 0       # 强制未设置态，看引导长什么样
+WorkPepTalk.exe --shot out.png --setup 1       # 强制已设置态
+WorkPepTalk.exe --shot out.png --click 260.83 18.67   # 先派发一次真实点击（页面 CSS 坐标）
+WorkPepTalk.exe --shot out.png --eval "window.App.isConfigured()"   # 在页面里跑一段 JS
+```
+
+`--click` 走 WebView2 的 DevTools 协议（`Input.dispatchMouseEvent`），触发的是浏览器内核真实的 mousedown → mouseup → click 序列，但**不碰系统光标**。这一点在排查「按钮点了没反应」时是决定性的：如果 mousedown 期间触发了系统级拖窗循环，click 会被整段吞掉，只有真实事件序列能暴露。
 
 ---
 

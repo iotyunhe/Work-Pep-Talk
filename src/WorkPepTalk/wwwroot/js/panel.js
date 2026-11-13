@@ -12,18 +12,36 @@
   const UNIT = { monthly: '元 / 月', daily: '元 / 天', hourly: '元 / 时' };
   const MODE_LABEL = { monthly: '月薪', daily: '日薪', hourly: '时薪' };
   const THEME_LABEL = { A: '纸质', B: '仪表', C: '像素' };
+  /* 预览块里的字样，用各主题自己的字形渲染出来才看得出区别 */
+  const THEME_SAMPLE = { A: '¥88.00', B: '88.00', C: '¥88' };
 
   /* ------------------------------------------------------------ 渲染 */
 
   function render(c, cfg) {
     const raw = root.App ? root.App.getRaw() : rawOf(cfg);
+    const first = root.App ? root.App.isFirstRun() : false;
+    const configured = root.App ? root.App.isConfigured() : true;
+
+    /*
+     * 首次使用的引导条。只在 needFirstRun 时出现，用户填过之后永远不再出现。
+     * 语气不劝、不哄，只说明这些数只有他自己知道。
+     */
+    const guide = first
+      ? '<div class="pn-guide">' +
+          '<b>第一次使用</b>' +
+          '<span>填一下你的工资。上下班时间和工时如果和默认不一样，顺手改掉。' +
+          '这些数只有你自己清楚，我不替你猜。</span>' +
+        '</div>'
+      : '';
 
     return '' +
-      '<div class="panel">' +
+      '<div class="panel' + (first ? ' is-first' : '') + '">' +
         '<div class="pn-title">' +
-          '<h3>设置</h3>' +
+          '<h3>' + (first ? '先设置一下' : '设置') + '</h3>' +
           '<span class="pn-x" data-act="closePanel" title="关闭">✕</span>' +
         '</div>' +
+
+        guide +
 
         '<div class="pn-grp">收入口径</div>' +
         '<div class="seg">' +
@@ -33,7 +51,7 @@
           }).join('') +
         '</div>' +
 
-        '<div class="inp">' +
+        '<div class="inp' + (first ? ' need' : '') + '">' +
           '<span>金额</span>' +
           '<input type="text" inputmode="decimal" data-f="pay.value" value="' +
             esc(raw.pay.value) + '">' +
@@ -42,8 +60,10 @@
 
         '<div class="pn-grp">折算结果</div>' +
         '<div class="out">' +
-          '<div><span>日薪</span><b data-out="daily">¥' + Core.yuan(c.daily) + '</b></div>' +
-          '<div><span>时薪</span><b data-out="hourly">¥' + Core.yuan(c.hourly) + '</b></div>' +
+          '<div><span>日薪</span><b data-out="daily">' +
+            (configured ? '¥' + Core.yuan(c.daily) : '¥ —') + '</b></div>' +
+          '<div><span>时薪</span><b data-out="hourly">' +
+            (configured ? '¥' + Core.yuan(c.hourly) : '¥ —') + '</b></div>' +
         '</div>' +
 
         '<div class="pn-grp">工时设定</div>' +
@@ -79,7 +99,7 @@
         '<div class="thm-row">' +
           ['A', 'B', 'C'].map(function (t) {
             return '<div class="thm ' + (cfg.theme === t ? 'on' : '') + '" data-theme="' + t + '">' +
-              '<i></i><em>' + THEME_LABEL[t] + '</em></div>';
+              '<i>' + THEME_SAMPLE[t] + '</i><em>' + THEME_LABEL[t] + '</em></div>';
           }).join('') +
         '</div>' +
         '<div class="sw-wrap">' +
@@ -114,8 +134,10 @@
         '</div>' +
 
         '<div class="pn-foot">' +
-          '<button class="btn" data-act="reset">恢复默认</button>' +
-          '<button class="btn primary" data-act="closePanel">完成</button>' +
+          (first ? '' : '<button class="btn" data-act="reset">恢复默认</button>') +
+          '<button class="btn primary' + (first ? ' full' : '') + '" data-act="closePanel">' +
+            (first ? '开始使用' : '完成') +
+          '</button>' +
         '</div>' +
       '</div>';
   }
@@ -126,6 +148,9 @@
 
   /* 改工资时只更新这两个数，不重绘面板 —— 否则输入框每秒失焦，没法打字 */
   function refreshDerived(c, cfg) {
+    /* 还没填过自己的工资时保持「—」，不要把占位值算出来的数摆到用户面前 */
+    if (root.App && !root.App.isConfigured()) return;
+
     const q = function (s) { return document.querySelector(s); };
     const d = q('[data-out="daily"]'), h = q('[data-out="hourly"]');
     if (d) d.textContent = '¥' + Core.yuan(c.daily);
@@ -144,6 +169,14 @@
     rootEl.addEventListener('input', function (e) {
       const key = e.target.getAttribute && e.target.getAttribute('data-f');
       if (!key) return;
+
+      /*
+       * 只要用户在金额框里真的打过字，就认定他确认过自己的工资 ——
+       * 必须赶在 setValue 之前标记，这样同一轮里的折算结果才会更新
+       * （否则这一帧还算「未设置」，日薪时薪会停在「—」上）。
+       */
+      if (key === 'pay.value' && root.App) root.App.markConfigured();
+
       setValue(key, e.target.value, true);
     });
 
@@ -191,12 +224,11 @@
       if (!actEl) return;
       const act = actEl.getAttribute('data-act');
 
-      if (act === 'closePanel') {
-        if (root.App) root.App.setView('widget');
-        if (window.chrome && window.chrome.webview) {
-          window.chrome.webview.postMessage({ type: 'closeSettings' });
-        }
-      } else if (act === 'reset') {
+      /*
+       * 关闭面板统一由 app.js 的 document 级处理器收口（closeSettings），
+       * 这里不重复处理 —— 两处都发会让宿主收到两次 closeSettings。
+       */
+      if (act === 'reset') {
         apply(function (raw) {
           const d = JSON.parse(JSON.stringify(Core.DEFAULT_CONFIG));
           raw.pay = d.pay; raw.schedule = d.schedule; raw.look = d.look;
