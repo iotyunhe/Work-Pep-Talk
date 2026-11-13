@@ -168,6 +168,17 @@
 .pn-num:focus { border-color: #C9A38E; }
 .pn-unit { font-size: 10px; color: #8A8378; }
 
+/* 「清除」这种文字型链接。不能套 .pn-x —— 那是给单个 ✕ 设计的 20px 方框，
+   两个汉字塞进去会竖着排。 */
+.pn-link {
+  margin-left: auto;
+  font-size: 10.5px; color: #8A8378;
+  cursor: pointer; padding: 2px 5px; border-radius: 4px;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.pn-link:hover { background: #F0EBE0; color: var(--accent); }
+
 /* --- 复选框 */
 .chk {
   display: flex; align-items: center; gap: 6px;
@@ -266,9 +277,11 @@
   background: #fff; border: 1px dashed #C9C1B2;
   color: #9A9386; font-size: 12px;
   line-height: 17px; text-align: center;
-  font-family: var(--sans); position: relative; overflow: hidden;
+  font-family: var(--sans);
+  transition: transform .12s, border-color .15s, color .15s;
 }
-.sw.up input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+/* 点了要选图，给个明确的悬停反馈 —— 之前是个隐形的 file input，看起来像装饰 */
+.sw.up:hover { border-color: var(--accent); color: var(--accent); }
 
 /* --- 底部按钮 */
 .pn-foot {

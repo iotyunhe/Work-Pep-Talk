@@ -109,9 +109,7 @@
               return '<i class="sw ' + (cfg.background === b.id ? 'on' : '') +
                 '" style="background:' + b.hex + '" data-bg="' + b.id + '" title="' + b.name + '"></i>';
             }).join('') +
-            '<i class="sw up" title="上传背景图">+' +
-              '<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" data-upload="bg">' +
-            '</i>' +
+            '<i class="sw up" title="选一张背景图（也可以直接把图片拖进来）" data-act="pickBg">+</i>' +
           '</div>' +
         '</div>' +
         '<div class="pn-line">' +
@@ -119,7 +117,7 @@
           '<span class="pn-unit" data-bgname>' +
             (cfg.bgImage ? '已设置' : '未上传') +
           '</span>' +
-          (cfg.bgImage ? '<span class="pn-x" data-act="clearBg" style="margin-left:auto">清除</span>' : '') +
+          (cfg.bgImage ? '<span class="pn-link" data-act="clearBg">清除</span>' : '') +
         '</div>' +
 
         '<div class="pn-grp">行为</div>' +
@@ -235,24 +233,18 @@
         });
       } else if (act === 'clearBg') {
         apply(function (raw) { raw.look.bgImage = null; });
+      } else if (act === 'pickBg') {
+        /*
+         * 选图交给宿主。
+         * 原来这里是个 <input type="file">，但在「无边框 + 置顶 + 不进任务栏」
+         * 的小窗口上，WebView2 自带的文件框弹不出来 —— 点了完全没反应。
+         * 宿主用 WPF 的 OpenFileDialog 弹，选完把图片按 data URL 传回来。
+         */
+        if (root.App) root.App.pickBackground();
       }
     });
 
-    /* 上传背景图：读成 data URL 存进配置，绿色版不依赖文件路径跑丢 */
-    rootEl.addEventListener('change', function (e) {
-      if (!e.target || e.target.getAttribute('data-upload') !== 'bg') return;
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      if (file.size > 6 * 1024 * 1024) {
-        alert('图片太大（超过 6MB）。挂件常驻内存，别放这么大的图。');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = function () {
-        apply(function (raw) { raw.look.bgImage = reader.result; });
-      };
-      reader.readAsDataURL(file);
-    });
+    /* 上传背景图不再是页面自己的事：宿主弹框、读盘、编码，回传 bgImage 消息 */
   }
 
   /* ------------------------------------------------------------ 写配置 */

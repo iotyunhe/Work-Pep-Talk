@@ -62,6 +62,18 @@ public partial class App : System.Windows.Application
         win.Show();
 
 #if DEBUG
+        /* --pick：启动 2.5 秒后自动弹选图框。
+           用来在「用户真实可见的桌面」上验证对话框能不能显示 ——
+           后台方式拉起的进程窗口在隐藏桌面上，截图看不到，结论不可信。 */
+        if (e.Args.Contains("--pick"))
+        {
+            var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
+            t.Tick += (_, _) => { t.Stop(); win.DebugPickBackground(); };
+            t.Start();
+        }
+#endif
+
+#if DEBUG
         /* --shot <png> ：等页面稳定后自截一张再退出，仅调试构建可用。
            用来核对像素级布局，不用去截屏打扰用户桌面。
            --click <x> <y> 可先派发一次真实点击，用来验证按钮是否真的能点开。 */

@@ -253,6 +253,59 @@
     host.send({ type: 'menu' });
   });
 
+  /* ------------------------------------------------------------ 拖入图片 */
+
+  /*
+   * 把图片文件直接拖到挂件或面板上，也能当背景。
+   *
+   * 这是「点 + 选图」之外的第二条路：系统文件框在某些窗口样式或环境下
+   * 可能弹不出来，拖拽只依赖浏览器的 HTML5 拖放，不经过宿主。
+   *
+   * 必须 preventDefault：WebView2 默认会拿拖进来的文件当导航目标，
+   * 一松手整个页面就被那张图替换掉了。
+   */
+  let dragDepth = 0;
+
+  function isImageFile(f) {
+    return !!f && /^image\//.test(f.type || '');
+  }
+
+  function loadDroppedImage(file) {
+    if (!isImageFile(file)) return;
+    if (file.size > 6 * 1024 * 1024) {
+      alert('图片超过 6MB。挂件是常驻内存的，别放这么大的图。');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function () { window.App.setBackgroundImage(reader.result); };
+    reader.readAsDataURL(file);
+  }
+
+  document.addEventListener('dragenter', function (e) {
+    e.preventDefault();
+    dragDepth++;
+    document.body.classList.add('is-dragging');
+  });
+
+  document.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  });
+
+  document.addEventListener('dragleave', function (e) {
+    e.preventDefault();
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) document.body.classList.remove('is-dragging');
+  });
+
+  document.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dragDepth = 0;
+    document.body.classList.remove('is-dragging');
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length) loadDroppedImage(files[0]);
+  });
+
   /* ------------------------------------------------------------ 配置 */
 
   function applyConfig(raw, opts) {
@@ -333,6 +386,16 @@
     getRaw: currentRaw,
     cfg: function () { return cfg; },
     windowBackground: windowBackground,
+    /* 背景图选择交给宿主：这个窗口上 WebView2 自带的 file input 弹不出框 */
+    pickBackground: function () { host.send({ type: 'pickBg' }); },
+    /* 宿主选完图回传 data URL，存进配置（绿色版不依赖源文件路径） */
+    setBackgroundImage: function (dataUrl) {
+      if (!dataUrl) return;
+      const raw = currentRaw();
+      raw.look.bgImage = dataUrl;
+      applyConfig(raw);
+      host.send({ type: 'save', config: raw });
+    },
     redraw: draw
   };
 
@@ -398,6 +461,8 @@
     } else if (msg.type === 'reloadConfig') {
       rawCache = msg.config ? deepClone(msg.config) : rawCache;
       applyConfig(rawCache);
+    } else if (msg.type === 'bgImage') {
+      window.App.setBackgroundImage(msg.dataUrl);
     } else if (msg.type === 'topmost') {
       /* 宿主是置顶状态的唯一真相源：它回什么就是什么，覆盖乐观值 */
       setPin(!!msg.on);

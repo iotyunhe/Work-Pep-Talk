@@ -446,6 +446,10 @@ public partial class MainWindow : Window
                     break;
                 }
 
+                case "pickBg":
+                    PickBackgroundImage();
+                    break;
+
                 case "menu":
                     ShowContextMenu();
                     break;
@@ -701,6 +705,77 @@ public partial class MainWindow : Window
         catch { /* 颜色串不合法就保持原色 */ }
     }
 
+    /* ---------------------------------------------------------- 背景图 */
+
+    /// <summary>
+    /// 选一张背景图。
+    ///
+    /// 页面里原来用 &lt;input type="file"&gt;，但在这个「无边框 + 置顶 + 不进任务栏」
+    /// 的小窗口上，WebView2 自带的文件框根本弹不出来 —— 点了完全没反应。
+    /// 改由宿主弹 OpenFileDialog（owner 传 this，否则框会跑到窗口后面），
+    /// 选完读成 data URL 回传页面。页面不碰文件系统，绿色版也就不会因为
+    /// 挪了目录丢图。
+    /// </summary>
+    private void PickBackgroundImage()
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "选一张背景图",
+            Filter = "图片文件|*.png;*.jpg;*.jpeg;*.gif;*.webp|所有文件|*.*",
+            CheckFileExists = true
+        };
+
+        Log.Info("打开背景图选择框");
+
+        /*
+         * owner 传 this：对话框跟着挂件走，不会跑到别的窗口后面。
+         * 页面里原来那个 <input type="file"> 走的是 WebView2 自带的文件选择器，
+         * 在这个无边框小窗口上弹不出来，所以整条路改由宿主自己弹框。
+         */
+        bool? picked;
+        try { picked = dlg.ShowDialog(this); }
+        catch (Exception ex)
+        {
+            Log.Warn("打开选图框失败：" + ex.Message);
+            return;
+        }
+
+        if (picked != true)
+        {
+            Log.Info("选背景图：已取消");
+            return;
+        }
+
+        try
+        {
+            var info = new FileInfo(dlg.FileName);
+            if (info.Length > 6 * 1024 * 1024)
+            {
+                Log.Warn($"背景图过大：{info.Length / 1024} KB");
+                MessageBox.Show(this,
+                    "图片超过 6MB。挂件是常驻内存的，别放这么大的图。",
+                    "上班鼓励器", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var mime = info.Extension.ToLowerInvariant() switch
+            {
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                _ => "image/jpeg"
+            };
+
+            var b64 = Convert.ToBase64String(File.ReadAllBytes(info.FullName));
+            SendToWeb("bgImage", new { dataUrl = $"data:{mime};base64,{b64}" });
+            Log.Info($"背景图已载入：{info.Name}（{info.Length / 1024} KB）");
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("读取背景图失败：" + ex.Message);
+        }
+    }
+
     private void ToggleCollapse()
     {
         var collapsed = !_store.Current.Window.Collapsed;
@@ -782,6 +857,9 @@ public partial class MainWindow : Window
         await Web.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, fs);
         return path;
     }
+
+    /// <summary>调试用：直接弹选图框，验证它能在这个窗口上显示出来。</summary>
+    public void DebugPickBackground() => PickBackgroundImage();
 
     /// <summary>调试用：在页面里执行一段 JS，用于验证交互路径。</summary>
     public async Task<string> EvalAsync(string js)

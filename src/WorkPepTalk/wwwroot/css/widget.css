@@ -350,3 +350,19 @@ body { user-select: none; -webkit-user-select: none; }
 
 /* 收起态窗口比圆球大一圈，留出角标的位置；圆球居中，不贴着左上角 */
 #root.v-ball { padding: 10px; }
+
+/* ---------------------------------------------------------------------
+   拖入图片时的落点提示
+   把图片文件拖到挂件上就能换背景（不经过系统文件框），拖进来时描一圈边，
+   否则用户不知道松手会发生什么。
+   --------------------------------------------------------------------- */
+body.is-dragging #root::after {
+  content: "松开换成背景图";
+  position: fixed; inset: 0;
+  display: grid; place-items: center;
+  font-family: var(--sans); font-size: 11px;
+  color: #fff; background: rgba(30, 28, 25, .45);
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 99;
+}
