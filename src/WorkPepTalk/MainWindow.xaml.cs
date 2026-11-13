@@ -758,22 +758,57 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var mime = info.Extension.ToLowerInvariant() switch
-            {
-                ".png" => "image/png",
-                ".gif" => "image/gif",
-                ".webp" => "image/webp",
-                _ => "image/jpeg"
-            };
-
-            var b64 = Convert.ToBase64String(File.ReadAllBytes(info.FullName));
+            var (bytes, mime, note) = PrepareBackground(info.FullName);
+            var b64 = Convert.ToBase64String(bytes);
             SendToWeb("bgImage", new { dataUrl = $"data:{mime};base64,{b64}" });
-            Log.Info($"背景图已载入：{info.Name}（{info.Length / 1024} KB）");
+            Log.Info($"背景图已载入：{info.Name}（原 {info.Length / 1024} KB → {bytes.Length / 1024} KB，{note}）");
         }
         catch (Exception ex)
         {
             Log.Warn("读取背景图失败：" + ex.Message);
         }
+    }
+
+    /*
+     * 把选中的图缩到挂件用得上的尺寸再回传。
+     *
+     * 为什么不原样塞 data URL：Chromium 对单个资源 URL 有长度上限，一张 4MB 的
+     * PNG 编码成 base64 是 5.7MB，塞进 style 属性后 --wd-photo 整条声明被丢弃，
+     * 算出来的 background-image 是 none —— 背景永远不显示，还一句报错都没有。
+     * 1200px 的 JPEG 通常二三百 KB，远在限制之内。
+     *
+     * 透明区域先铺白：挂件底衬本来就是浅色，透明 PNG 直接转 JPEG 会发黑。
+     */
+    private static (byte[] bytes, string mime, string note) PrepareBackground(string path)
+    {
+        const int MaxSide = 1200;
+
+        using var fs = File.OpenRead(path);
+        var frame = BitmapFrame.Create(fs, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.OnLoad);
+
+        var scale = Math.Min(1.0, (double)MaxSide / Math.Max(frame.PixelWidth, frame.PixelHeight));
+        BitmapSource src = scale < 0.999
+            ? new TransformedBitmap(frame, new ScaleTransform(scale, scale))
+            : frame;
+
+        int w = src.PixelWidth, h = src.PixelHeight;
+
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, w, h));
+            dc.DrawImage(src, new Rect(0, 0, w, h));
+        }
+
+        var rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(visual);
+
+        var encoder = new JpegBitmapEncoder { QualityLevel = 88 };
+        encoder.Frames.Add(BitmapFrame.Create(rtb));
+        using var ms = new MemoryStream();
+        encoder.Save(ms);
+
+        return (ms.ToArray(), "image/jpeg", $"{frame.PixelWidth}×{frame.PixelHeight} → {w}×{h}");
     }
 
     private void ToggleCollapse()

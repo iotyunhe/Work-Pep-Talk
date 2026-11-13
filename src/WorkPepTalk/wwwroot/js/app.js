@@ -266,6 +266,61 @@
    */
   let dragDepth = 0;
 
+  /*
+   * 背景图统一缩到 1200px 长的边再存。
+   *
+   * 不是省空间这么简单：Chromium 对单个资源 URL 有长度上限，一张 4MB 的 PNG
+   * 编码成 base64 是 5.7MB，塞进 style 属性会让 --wd-photo 整条声明失效，
+   * 浏览器算出来 background-image 是 none —— 背景一声不响地不显示。
+   * 1200px 的 JPEG 一般两三百 KB，远在限制之内，挂件只有 300 CSS px 宽，
+   * 放大到 150% 也够用。
+   */
+  const BG_MAX_SIDE = 1200;
+
+  function shrinkImage(file) {
+    return createImageBitmap(file).then(function (bmp) {
+      const scale = Math.min(1, BG_MAX_SIDE / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * scale));
+      const h = Math.max(1, Math.round(bmp.height * scale));
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff';                 /* 透明 PNG 转 JPEG 会发黑，先铺白 */
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(bmp, 0, 0, w, h);
+      if (bmp.close) bmp.close();
+      return cv.toDataURL('image/jpeg', 0.88);
+    });
+  }
+
+  /*
+   * 老配置里可能躺着几 MB 的 data URL（就是修复前存进去的那种）。这种图在
+   * CSS 里整条声明都会失效，表现出来就是「图加了，背景没变」。启动时就地
+   * 缩一次再存回，用户不用重新选图。
+   */
+  function shrinkOversizedBg() {
+    const url = cfg.bgImage;
+    if (!url || url.length < 1200000) return;
+
+    const img = new Image();
+    img.onload = function () {
+      try {
+        const scale = Math.min(1, BG_MAX_SIDE / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const small = cv.toDataURL('image/jpeg', 0.88);
+        if (small.length < url.length) window.App.setBackgroundImage(small);
+      } catch (e) { /* 缩放不了就维持原样，至少不崩 */ }
+    };
+    img.src = url;
+  }
+
   function isImageFile(f) {
     return !!f && /^image\//.test(f.type || '');
   }
@@ -276,9 +331,14 @@
       alert('图片超过 6MB。挂件是常驻内存的，别放这么大的图。');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = function () { window.App.setBackgroundImage(reader.result); };
-    reader.readAsDataURL(file);
+    shrinkImage(file).then(function (dataUrl) {
+      window.App.setBackgroundImage(dataUrl);
+    }).catch(function () {
+      /* 少数解不了的格式（动图 webp 之类）退回原图，至少能显示出来 */
+      const reader = new FileReader();
+      reader.onload = function () { window.App.setBackgroundImage(reader.result); };
+      reader.readAsDataURL(file);
+    });
   }
 
   document.addEventListener('dragenter', function (e) {
@@ -456,6 +516,7 @@
 
       lastSize = '';
       draw();
+      shrinkOversizedBg();
     } else if (msg.type === 'setView') {
       setView(msg.view);
     } else if (msg.type === 'reloadConfig') {

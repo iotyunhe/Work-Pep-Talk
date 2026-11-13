@@ -536,6 +536,7 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
       <tr><td>19</td><td>面板输入不失焦</td><td>点开金额框后光标常驻，连续输入 <code>15000</code> 不打嗝；输入过程中日薪/时薪每秒跟着更新，但输入框节点不被替换（<code>document.activeElement</code> 仍是它，<code>:focus-within</code> 高亮不灭）。改背景色、切口径这类必须重绘的点击，只重建面板、保留滚动位置</td></tr>
       <tr><td>20</td><td>自定义背景图</td><td>点「+」弹出系统选图框（由宿主弹，不是 WebView2 自带的选择器）；选一张图后挂件用图铺底、面板显示「已设置」并出现「清除」。把图片文件直接拖到挂件上同样生效。两种情况都写进 <code>config.json</code> 的 <code>look.bgImage</code>（data URL），挪动目录后图不丢</td></tr>
       <tr><td>21</td><td>卡片顶部无白边</td><td>主题 B 顶部那道细线是「今天过了多少」的进度条，不是描边：左右各内缩 10px、两端 2px 圆角、填充压到四五成，轨道用 <code>--wd-track</code>。截图核对：卡片第 1 行只有 1px 的 <code>--wd-edge</code> 描边（深底即 <code>rgba(255,255,255,.20)</code>，青底上呈 86,151,155），往下 2–6 行是纯底色，进度条落在第 7–9 行且不贴左右边缘。修复前是 3px 通栏 <code>rgba(255,255,255,.8)</code>（呈 220,233,234，近白），叠上描边共 4px 亮条压在顶边</td></tr>
+      <tr><td>22</td><td>自定义背景图真的显示出来</td><td>选图或拖图后挂件立刻换成该图铺底，画面看得清（55% 白衬底，不再用会把图糊成色团的毛玻璃），正文仍可读。存进 <code>look.bgImage</code> 的是长边 ≤1200px 的 JPEG data URL（约 200KB），不是原图 —— 原图 4MB 编码成 base64 是 5.7MB，超过 Chromium 单个资源 URL 的长度上限，<code>--wd-photo</code> 整条声明会被丢弃，算出来 <code>background-image</code> 是 <code>none</code>，背景一声不响地不显示。老配置里躺着大图的，启动时自动缩一次并存回。另：URL 必须用单引号包在 <code>style="..."</code> 里，双引号会把属性截断</td></tr>
     </tbody>
   </table>
 

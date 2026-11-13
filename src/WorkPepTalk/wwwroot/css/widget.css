@@ -301,8 +301,14 @@ body { user-select: none; -webkit-user-select: none; }
 /* =================================================== 自定义背景图 */
 
 /*
- * 图片垫在底下，上面盖一层 74% 的半透明底衬 + 18px 毛玻璃。
- * 这样再花的照片也吃不掉数字，同时还能看见图。
+ * 图片垫在底下，上面盖一层半透明底衬。
+ *
+ * 原来写的是 74% 白 + 18px 毛玻璃，实测下来照片被压成一块色团 —— 用户看到
+ * 的就是"图好像加上了，但看着还是一片白，跟没换一样"。现在 55% 白、不糊：
+ * 画面看得清是自己选的那张，正文墨色对浅底仍有足够对比。
+ *
+ * 别再加 backdrop-filter blur 了 —— WebView2 里 2px 就糊得认不出内容，
+ * 想柔化就调白衬底的透明度，那个是可控的。
  */
 .wd-photo::before {
   content: "";
@@ -310,13 +316,14 @@ body { user-select: none; -webkit-user-select: none; }
   background-image: var(--wd-photo);
   background-size: cover;
   background-position: center;
+  /* 先提亮：用户可能选一张很暗的图，深墨正文压在上面会读不出来 */
+  filter: brightness(1.18) saturate(.92);
   z-index: 0;
 }
 .wd-photo::after {
   content: "";
   position: absolute; inset: 0;
-  background: rgba(251, 250, 247, .74);
-  backdrop-filter: blur(18px) saturate(1.15);
+  background: rgba(251, 250, 247, .55);
   z-index: 0;
 }
 .wd-photo > * { position: relative; z-index: 1; }

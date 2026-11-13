@@ -180,8 +180,18 @@
     const tk = usePhoto ? Core.tokenStr(Core.bgTokens('white'))
                         : Core.tokenStr(Core.bgTokens(cfg.background));
 
+    /*
+     * 注意这里必须用**单引号**包 URL。
+     *
+     * 整段 token 是塞进 style="..." 里的（外层双引号），再写 url("...") 就是
+     * 双引号套双引号 —— HTML 解析到 url( 后面那个 " 就把 style 属性截断了，
+     * --wd-photo 剩下半截 url( ，浏览器算出来是 url("")，图永远不显示。
+     *
+     * 也不能不加引号：data URL 前缀里的分号（image/png;base64）在 style
+     * 属性里会被当成声明分隔符，同样断掉。只能单引号。
+     */
     const bgStyle = usePhoto
-      ? tk + ';--wd-photo:url("' + escapeCssUrl(cfg.bgImage) + '")'
+      ? tk + ";--wd-photo:url('" + escapeCssUrl(cfg.bgImage) + "')"
       : tk;
 
     const amt = Core.yuan(c.earned);
@@ -253,7 +263,11 @@
       .replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
   function escapeCssUrl(s) {
-    return String(s).replace(/"/g, '%22').replace(/\)/g, '%29');
+    /* 单双引号、反斜杠、右括号都会提前结束 url() 或 style 属性 */ 
+    return String(s)
+      .replace(/["']/g, function (c) { return c === '"' ? '%22' : '%27'; })
+      .replace(/\\/g, '%5C')
+      .replace(/\)/g, '%29');
   }
 
   root.Render = {
