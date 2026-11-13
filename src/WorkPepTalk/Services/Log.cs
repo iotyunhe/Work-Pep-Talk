@@ -11,7 +11,7 @@ public static class Log
 {
     private static readonly object Gate = new();
     private static readonly string FilePath =
-        System.IO.Path.Combine(AppContext.BaseDirectory, "app.log");
+        System.IO.Path.Combine(AppPaths.BaseDir, "app.log");
 
     private const long MaxBytes = 256 * 1024;
 

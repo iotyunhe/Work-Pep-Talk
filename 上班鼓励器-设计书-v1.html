@@ -462,7 +462,7 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
     <li>置顶用 <code>set_always_on_top(true)</code>；全屏应用覆盖时由系统接管，不做额外干预。</li>
     <li>开机自启由 <code>tauri-plugin-autostart</code> 写 <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</code>，卸载时删除该键。</li>
     <li>单实例由官方插件实现，第二次启动把已有窗口提到前台。</li>
-    <li>打包 <code>.exe</code> 目标选择可执行文件而非安装包，产物连同 <code>config.json</code>、<code>assets/</code> 放同一目录即为绿色版。</li>
+    <li>打包 <code>.exe</code> 目标选择可执行文件而非安装包。最终落地的 .NET 8 + WPF 版本把界面资源全部内嵌进程序集，<strong>发布产物只有一个 <code>WorkPepTalk.exe</code></strong>，发给别人双击即用；<code>config.json</code>、<code>app.log</code> 与 WebView2 缓存目录在首次运行时自建于 exe 同级。</li>
   </ul>
   <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 9 页 / 共 11 页</span></div>
 </section>
@@ -525,6 +525,7 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
       <tr><td>11</td><td>开机自启</td><td>登录后 3 秒内出现，任务管理器无额外 UAC 提示</td></tr>
       <tr><td>12</td><td>资源占用</td><td>空闲 CPU &lt; 1%，内存 &lt; 80MB</td></tr>
       <tr><td>13</td><td>夜班 22:00–06:00</td><td>23:00 显示进度正常；次日 02:00 仍属同一班次</td></tr>
+      <tr><td>14</td><td>单文件分发</td><td>只把 <code>WorkPepTalk.exe</code> 拷到一台干净机器，双击能显示出挂件；同级目录只多出 config.json、app.log、WebView2Data</td></tr>
     </tbody>
   </table>
 

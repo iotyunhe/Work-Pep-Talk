@@ -58,11 +58,28 @@ public partial class MainWindow : Window
         InitializeComponent();
         _store = store;
 
+        TrySetWindowIcon();
+
         _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); PersistWindowState(); };
 
         Loaded += OnLoaded;
         LocationChanged += OnLocationChanged;
         Closed += OnClosed;
+    }
+
+    /* Alt-Tab 预览和错误对话框会用到窗口图标。窗口本身不显示标题栏，
+       所以这里只是兜个底，主要视觉入口是托盘。 */
+    private void TrySetWindowIcon()
+    {
+        try
+        {
+            Icon = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri("pack://application:,,,/Assets/app.ico", UriKind.Absolute));
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("窗口图标加载失败：" + ex.Message);
+        }
     }
 
     /* ------------------------------------------------------------ 启动 */
@@ -126,9 +143,10 @@ public partial class MainWindow : Window
     {
         try
         {
-            // 用户数据放 exe 同级，绿色版不污染 AppData
-            var dataDir = Path.Combine(AppContext.BaseDirectory, "WebView2Data");
-            Directory.CreateDirectory(dataDir);
+            // 用户数据放 exe 同级，绿色版不污染 AppData；目录不可写时（装在
+            // Program Files、或 exe 放在只读位置）才落到 %LOCALAPPDATA%
+            var dataDir = ResolveDataDir();
+            Log.Info("WebView2 数据目录：" + dataDir);
 
             /*
              * 挂件只需要画一小块静态内容，但 WebView2 默认会起一整套浏览器进程组。
@@ -185,19 +203,35 @@ public partial class MainWindow : Window
             core.ProcessFailed += (_, ev) =>
                 Log.Error("WebView 进程异常：" + ev.ProcessFailedKind);
 
-            var wwwroot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
-            if (!Directory.Exists(wwwroot))
-            {
-                Log.Error("找不到 wwwroot 目录：" + wwwroot);
-                MessageBox.Show("安装不完整：缺少 wwwroot 目录。请重新解压整个文件夹。",
-                    "上班鼓励器", MessageBoxButton.OK, MessageBoxImage.Error);
-                Application.Current.Shutdown();
-                return;
-            }
+            var wwwrootCheck = Path.Combine(AppPaths.BaseDir, "wwwroot");
 
-            core.SetVirtualHostNameToFolderMapping(
-                "app.local", wwwroot, CoreWebView2HostResourceAccessKind.Allow);
-            Log.Info("虚拟主机映射 app.local → " + wwwroot);
+            if (WebResources.Count == 0)
+            {
+                /* 正常情况下资源一定内嵌在程序集里。只剩一种可能：构建时
+                   wwwroot 没被打进去（比如有人手工改过 csproj）。此时如果
+                   磁盘上还留着老版本的 wwwroot 目录，就用目录顶着，别直接白屏。 */
+                if (!Directory.Exists(wwwrootCheck))
+                {
+                    Log.Error("程序集内没有任何页面资源，且缺少 wwwroot 目录");
+                    MessageBox.Show("安装不完整：程序内没有页面资源。请重新下载完整的程序。",
+                        "上班鼓励器", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Application.Current.Shutdown();
+                    return;
+                }
+
+                Log.Warn("启用磁盘 wwwroot 兜底：" + wwwrootCheck);
+                core.SetVirtualHostNameToFolderMapping(
+                    "app.local", wwwrootCheck, CoreWebView2HostResourceAccessKind.Allow);
+            }
+            else
+            {
+                /* 页面全部从内嵌资源流里回应。好处是发布产物只有一个 exe，
+                   坏处是每个请求都要自己给 Content-Type，写完就不能改。 */
+                core.AddWebResourceRequestedFilter(
+                    "https://app.local/*", CoreWebView2WebResourceContext.All);
+                core.WebResourceRequested += OnWebResourceRequested;
+                Log.Info($"内嵌页面资源 {WebResources.Count} 个");
+            }
 
             core.Navigate("https://app.local/index.html" + DebugQuery);
             _webReady = true;
@@ -226,6 +260,122 @@ public partial class MainWindow : Window
                 catch { }
             }
             Application.Current.Shutdown();
+        }
+    }
+
+    /* ------------------------------------------------- 内嵌页面资源 */
+
+    /*
+     * wwwroot 下的文件被 csproj 以 web/xxx 的逻辑名打进程序集。
+     * 这里建一张「请求路径 → 资源名」的表，大小写不敏感（Windows 上写 URL
+     * 的人不会care大小写），同时把 MSBuild 给的 %(RecursiveDir) 反斜杠统一掉。
+     */
+    private static readonly Dictionary<string, string> WebResources = BuildWebResourceMap();
+
+    private static Dictionary<string, string> BuildWebResourceMap()
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var asm = typeof(MainWindow).Assembly;
+
+        foreach (var name in asm.GetManifestResourceNames())
+        {
+            if (!name.StartsWith("web/", StringComparison.Ordinal)) continue;
+            map[name[4..].Replace('\\', '/')] = name;
+        }
+        return map;
+    }
+
+    private static string MimeOf(string rel)
+    {
+        var dot = rel.LastIndexOf('.');
+        var ext = dot < 0 ? "" : rel[dot..].ToLowerInvariant();
+        return ext switch
+        {
+            ".html" or ".htm" => "text/html; charset=utf-8",
+            ".css" => "text/css; charset=utf-8",
+            ".js" => "text/javascript; charset=utf-8",
+            ".json" => "application/json; charset=utf-8",
+            ".svg" => "image/svg+xml",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".webp" => "image/webp",
+            ".woff2" => "font/woff2",
+            ".woff" => "font/woff",
+            ".ico" => "image/x-icon",
+            _ => "application/octet-stream"
+        };
+    }
+
+    /*
+     * 页面请求一律从这里回应。之所以不用 SetVirtualHostNameToFolderMapping：
+     * 那个 API 只能在磁盘上找目录，而我们要的一个 exe 里根本没有目录。
+     *
+     * 响应流交给 WebView2 之后不能立刻释放，所以每次复制一份 MemoryStream
+     * 递出去，让它自己读完回收 —— 文件总共几十 KB，不值得做池化。
+     */
+    private void OnWebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        var core = Web.CoreWebView2;
+        if (core is null) return;
+
+        try
+        {
+            var path = new Uri(e.Request.Uri).AbsolutePath;
+            var rel = Uri.UnescapeDataString(path).TrimStart('/');
+            if (rel.Length == 0) rel = "index.html";
+
+            if (!WebResources.TryGetValue(rel, out var resName))
+            {
+                Log.Warn("页面资源缺失：" + rel);
+                e.Response = core.Environment.CreateWebResourceResponse(
+                    null, 404, "Not Found", "Content-Type: text/plain; charset=utf-8");
+                return;
+            }
+
+            using var src = typeof(MainWindow).Assembly.GetManifestResourceStream(resName)!;
+            var ms = new MemoryStream((int)src.Length);
+            src.CopyTo(ms);
+            ms.Position = 0;
+
+            e.Response = core.Environment.CreateWebResourceResponse(
+                ms, 200, "OK",
+                "Content-Type: " + MimeOf(rel) + "\r\nCache-Control: no-store");
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("响应页面资源失败：" + ex.Message);
+            try
+            {
+                e.Response = core.Environment.CreateWebResourceResponse(
+                    null, 500, "Internal Error", "Content-Type: text/plain; charset=utf-8");
+            }
+            catch { /* 连 500 都构造不出来就只能让它白屏了 */ }
+        }
+    }
+
+    /// <summary>
+    /// WebView2 的用户数据目录。优先 exe 同级（绿色版语义），
+    /// 那里不可写就退到 %LOCALAPPDATA%\WorkPepTalk，宁可我脏一点也不能启动就崩。
+    /// </summary>
+    private static string ResolveDataDir()
+    {
+        var beside = Path.Combine(AppPaths.BaseDir, "WebView2Data");
+        try
+        {
+            Directory.CreateDirectory(beside);
+            var probe = Path.Combine(beside, ".write-test");
+            File.WriteAllText(probe, "1");
+            File.Delete(probe);
+            return beside;
+        }
+        catch
+        {
+            var fallback = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WorkPepTalk", "WebView2Data");
+            Directory.CreateDirectory(fallback);
+            Log.Warn("exe 同级不可写，WebView2 数据改存 " + fallback);
+            return fallback;
         }
     }
 

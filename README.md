@@ -16,25 +16,31 @@
 
 而 .NET 8 SDK、WPF 模板、WebView2 运行时三样本机都已就位。换成 WPF 之后，设计书里最有价值的部分 —— 计算内核规格、状态机、配色算法、HTML 界面稿 —— 全部原样复用，只是外壳从 Rust 换成了 C#。
 
-产物差别：Tauri 约 5–10 MB 单文件；本方案框架依赖发布约 5 MB（需目标机有 .NET 8 运行时），自包含发布约 65 MB（免安装，不依赖目标机环境）。
+产物差别：Tauri 约 5–10 MB 单文件；本方案 **自包含发布约 64 MB 单文件**（免安装、不依赖目标机环境），框架依赖发布约 2 MB 单文件（需目标机有 .NET 8 桌面运行时）。两种产物都是一整个 exe —— 界面已经嵌在程序集里，不需要旁边的 wwwroot 目录。
 
 ---
 
 ## 目录结构
 
 ```
+assets/app.ico               应用图标（9 档尺寸，16–256）
+scripts/make-icon.ps1        纯 GDI+ 生成上面那个 .ico，不依赖设计软件
+scripts/publish.ps1          打包单文件 exe
+scripts/icon-preview.ps1     把各档尺寸拼成一张图，用来眼睛验收
+
 src/WorkPepTalk/
 ├── App.xaml(.cs)            应用入口、单实例锁、未捕获异常兜底
-├── MainWindow.xaml(.cs)     无边框窗口、WebView2 宿主、消息通道、窗口定位
+├── MainWindow.xaml(.cs)     无边框窗口、WebView2 宿主、内嵌资源服务、窗口定位
 ├── Models/AppConfig.cs      config.json 的强类型映射
 ├── Services/
+│   ├── AppPaths.cs          程序目录解析（单文件下也指向 exe 所在处）
 │   ├── ConfigStore.cs       读写 config.json（原子写、坏文件自动备份重建）
 │   ├── AutoStart.cs         HKCU Run 键，免管理员权限
 │   ├── Tray.cs              托盘图标与右键菜单
-│   ├── IconFactory.cs       程序化生成图标，不依赖 .ico 文件
+│   ├── IconFactory.cs       从程序集资源里取图标，资源缺失时程序化兜底
 │   └── Log.cs               落盘日志，出问题有据可查
 ├── Interop/Native.cs        拖窗、置顶、点击穿透、DWM 圆角
-└── wwwroot/                 界面：HTML + CSS + JS
+└── wwwroot/                 界面：HTML + CSS + JS（编译时内嵌进 exe）
     ├── js/core.js           计算内核（纯函数，可单测）
     ├── js/render.js         挂件渲染（三主题共用一套 DOM）
     ├── js/panel.js          设置面板
@@ -57,9 +63,34 @@ node tests/core.test.js
 
 # 打包绿色版（自包含、单文件）
 pwsh scripts/publish.ps1
+
+# 打包框架依赖版（约 2MB，目标机需 .NET 8 桌面运行时）
+pwsh scripts/publish.ps1 -Framework
+
+# 重新生成图标（改了配色或形状时）
+powershell scripts/make-icon.ps1
 ```
 
-产物在 `publish/`，整个文件夹拷走即可运行。
+产物只有一个 `publish/WorkPepTalk.exe`。直接把这一个文件发给别人，双击就能用。
+
+---
+
+## 发给别人之前，需要知道的四件事
+
+1. **目标机要求**：Windows 10 1809+ / Windows 11，64 位。界面跑在 WebView2 里，需要 WebView2 运行时 —— Win11 和国内绝大多数 Win10 都随 Edge 自带。真缺了程序会弹窗说明并给出微软官方下载页，不会静默白屏。
+2. **首次运行会自建三样东西**，都在 exe 同级：`config.json`（你的设置）、`app.log`（日志，出问题看这个）、`WebView2Data/`（浏览器缓存，约 30MB）。想彻底卸载，删掉 exe 和这三样即可，不写注册表（除非你自己打开了开机自启）。
+3. **放在只读目录也没事**：exe 扔进 `C:\Program Files` 时，配置会自动退到 `%APPDATA%\WorkPepTalk`，缓存退到 `%LOCALAPPDATA%`。绿色版语义优先，但不会因为目录不可写就崩。
+4. **会被 SmartScreen 拦一下**：没做代码签名的 exe 从网络传过来，首次打开会提示"Windows 已保护你的电脑"。点"更多信息"→"仍要运行"即可。这不是报毒；要彻底消掉得买代码签名证书。
+
+单文件首次启动会先把原生库解到临时目录，慢一点（约 1 秒）是正常的，第二次就快了。
+
+---
+
+## 图标
+
+`assets/app.ico`，9 档尺寸（16/20/24/32/40/48/64/128/256）。造型是深墨圆角方 + 金色币缘 + 米色团子脸，和挂件里的内置形象同一套笔画，所以托盘里那一眼就能认出是它。
+
+`.ico` 不是用设计软件导的，是 `scripts/make-icon.ps1` 用 GDI+ 画出来的：每档先画 4 倍大再降采样，16/20/24 单独简化（去掉描边、放大眼睛和嘴），所以小尺寸不会糊成一团。改颜色只要动脚本顶部那五个十六进制色值。
 
 ---
 

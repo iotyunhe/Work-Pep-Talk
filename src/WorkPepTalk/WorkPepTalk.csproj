@@ -16,6 +16,8 @@
     <Company>Work-Pep-Talk</Company>
     <SatelliteResourceLanguages>zh-Hans;en</SatelliteResourceLanguages>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- exe 资源里的图标：资源管理器、任务栏、快捷方式都读这一份 -->
+    <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
     <!-- 绿色版：不生成 pdb 附带文件，单文件发布见 publish.ps1 -->
     <DebugType Condition="'$(Configuration)'=='Release'">none</DebugType>
     <!--
@@ -40,11 +42,23 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
   </ItemGroup>
 
+  <!--
+    图标同时要以 WPF 资源形式打进程序集：托盘 NotifyIcon 和窗口图标
+    运行时要拿到它，不能再去磁盘上找文件。
+  -->
   <ItemGroup>
-    <None Update="wwwroot\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
+    <Resource Include="..\..\assets\app.ico" Link="Assets\app.ico" />
+  </ItemGroup>
+
+  <!--
+    界面是 exe 里的一部分，不再依赖旁边的 wwwroot 目录 ——
+    这样发布出去可以只有一个 exe，拷到别人机器上直接双击。
+    逻辑名统一成 web/xxx，宿主按请求路径从资源流里取。
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot\**\*.*">
+      <LogicalName>web/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

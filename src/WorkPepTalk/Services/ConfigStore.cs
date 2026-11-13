@@ -36,7 +36,7 @@ public sealed class ConfigStore
     /// </summary>
     private static string ResolvePath()
     {
-        var beside = System.IO.Path.Combine(AppContext.BaseDirectory, "config.json");
+        var beside = System.IO.Path.Combine(AppPaths.BaseDir, "config.json");
         try
         {
             var dir = System.IO.Path.GetDirectoryName(beside)!;
