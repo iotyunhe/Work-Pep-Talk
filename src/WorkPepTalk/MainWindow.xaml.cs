@@ -52,10 +52,29 @@ public partial class MainWindow : Window
     /* 拖动窗口时 LocationChanged 会连发几十次，攒一下再落盘 */
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
 
+    /*
+     * 三个尺寸常量，和页面侧 app.js 的 DESIGN_W / BALL_W、CSS 的
+     * --wd-w:300px 是同一条设计约束。改宽度时三处要一起改。
+     */
+    private const double DesignWidth = 300;
+    private const double DesignHeight = 223;   // 页面量出内容高 221 后会自己纠到 221
+    private const double BallSize = 76;        // 球 56 + 四周留白，右下角标才不被窗口裁掉
+
     public MainWindow(ConfigStore store)
     {
         InitializeComponent();
         _store = store;
+
+        /*
+         * 首帧尺寸按上次的收起状态给。
+         *
+         * XAML 里写死的是 300×223（展开态），收起态启动时窗口会先以这么大
+         * 出现、页面加载完才缩成小球 —— 用户看到的是「一块白方块闪一下」。
+         * 这里先按状态给对，页面随后仍会按内容重报一次做最终对账。
+         */
+        var collapsed = _store.Current.Window.Collapsed;
+        Width = collapsed ? BallSize : DesignWidth;
+        Height = collapsed ? BallSize : DesignHeight;
 
         TrySetWindowIcon();
 
@@ -553,8 +572,8 @@ public partial class MainWindow : Window
          * 页面侧已经给了宽度下限（见 app.js syncSize），这里再拦一道：
          * 窗口是被这里设坏的，就在设坏的地方拦住。
          */
-        var isBall = Math.Abs(w - 76) < 0.5 && Math.Abs(h - 76) < 0.5;
-        if (!isBall && w < 299)
+        var isBall = Math.Abs(w - BallSize) < 0.5 && Math.Abs(h - BallSize) < 0.5;
+        if (!isBall && w < DesignWidth - 1)
         {
             Log.Warn($"忽略可疑宽度 {w:0.#}x{h:0.#}（展开瞬间按收起视口量出来的）");
             return;

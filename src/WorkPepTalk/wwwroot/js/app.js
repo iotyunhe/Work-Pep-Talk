@@ -227,7 +227,21 @@
 
   /* 尺寸上报：宿主据此调整窗口大小，避免出现空白边或裁切 */
   let lastSize = '';
+
+  /*
+   * 收到宿主配置之前不上报尺寸。
+   *
+   * 首帧画的是「默认状态 + 挂件」，量出来恒为 300×221；而收起态启动时
+   * 宿主给的窗口只有 76×76（宿主已按上次状态开窗）。这一帧报上去就是把
+   * 窗口撑回 300 宽，等 config 到达再切小球 —— 用户看到的是「闪一块白再
+   * 缩成球」。等视图定了再开始对账，这一跳就没了。
+   *
+   * 没有宿主（浏览器直开 index.html 调界面）时不存在这个问题，直接放行。
+   */
+  let sizeReady = !hasHost;
+
   function reportSize(w, h, force) {
+    if (!sizeReady) return;
     const key = w + 'x' + h;
     if (!force && key === lastSize) return;
     lastSize = key;
@@ -579,6 +593,9 @@
     if (msg.type === 'config') {
       rawCache = msg.config ? deepClone(msg.config) : deepClone(Core.DEFAULT_CONFIG);
 
+      /* 视图这一帧就定了，从这里开始上报尺寸（见 reportSize 的说明） */
+      sizeReady = true;
+
       /* 宿主告诉这块屏幕能放下多高的面板，小屏时面板内部滚动 */
       if (msg.maxPanelH) {
         document.documentElement.style.setProperty('--max-panel-h', msg.maxPanelH + 'px');
@@ -613,6 +630,16 @@
   applyDebugParams();
   draw();
   host.send({ type: 'ready' });
+
+  /*
+   * 兜底：宿主的 config 正常情况下 ready 之后立刻就到，这里给的 3 秒只是
+   * 防止「config 丢了」时页面一直不上报、窗口停在初始尺寸无法自纠。
+   */
+  setTimeout(function () {
+    if (sizeReady) return;
+    sizeReady = true;
+    syncSize(true);
+  }, 3000);
 
   /* 1 秒一跳。用 interval 而非 requestAnimationFrame：
      挂件长期在后台，rAF 会被节流到几乎不跑，countdown 会停。 */
