@@ -5,11 +5,13 @@
 # 也不用 Process.MainWindowHandle：这个窗口 WindowStyle=None 且不进任务栏，
 # 主窗口句柄给的是 0，只能自己按进程 ID 枚举可见顶层窗口。
 param(
-    [string]$Out = 'C:\Users\98201\WorkBuddy\spaces\2026_11_13_09-49-11\assets\widget-now.png',
+    [string]$Out,
     # 挂件没开置顶时会被别的窗口盖住，CopyFromScreen 截到的就是上层窗口。
     # 加 -Activate 先把挂件提到前台再截。
     [switch]$Activate
 )
+
+if (-not $Out) { $Out = Join-Path (Split-Path $PSScriptRoot -Parent) 'assets\widget-now.png' }
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -Namespace Win32 -Name W -MemberDefinition @'

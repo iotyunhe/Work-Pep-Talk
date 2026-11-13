@@ -1,5 +1,5 @@
 ﻿Add-Type -AssemblyName System.Drawing
-$root = 'C:\Users\98201\WorkBuddy\spaces\2026_11_13_09-49-11'
+$root = Split-Path $PSScriptRoot -Parent
 $icoPath = Join-Path $root 'assets\app.ico'
 
 $sheetW = 1120; $sheetH = 360

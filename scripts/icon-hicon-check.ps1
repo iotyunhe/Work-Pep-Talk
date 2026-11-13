@@ -1,10 +1,14 @@
 ﻿# 验证手写托盘的图标链：app.ico 里的 32px 档 → CreateIconFromResourceEx → HICON → 位图。
 # 托盘图标用的就是这条路，这里把它单独跑一遍并落成 PNG 供肉眼确认。
 param(
-    [string]$Ico = 'C:\Users\98201\WorkBuddy\spaces\2026_11_13_09-49-11\assets\app.ico',
-    [string]$Out = 'C:\Users\98201\WorkBuddy\spaces\2026_11_13_09-49-11\assets\hicon-check.png',
+    [string]$Ico,
+    [string]$Out,
     [int]$Size = 32
 )
+
+$repo = Split-Path $PSScriptRoot -Parent
+if (-not $Ico) { $Ico = Join-Path $repo 'assets\app.ico' }
+if (-not $Out) { $Out = Join-Path $repo 'assets\hicon-check.png' }
 
 Add-Type -AssemblyName System.Drawing
 

@@ -1,5 +1,5 @@
-﻿$T = 'C:\Users\98201\AppData\Local\Temp\wpt-v2'
-$src = 'C:\Users\98201\WorkBuddy\spaces\2026_11_13_09-49-11\publish\WorkPepTalk.exe'
+﻿$T = Join-Path $env:TEMP 'wpt-v2'
+$src = Join-Path (Split-Path $PSScriptRoot -Parent) 'publish\WorkPepTalk.exe'
 
 Get-Process WorkPepTalk -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 800

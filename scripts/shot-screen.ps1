@@ -5,11 +5,15 @@
 # 再起一个 Debug 实例截图、然后把实例也杀掉，结果是把用户桌面上真在用的
 # 挂件给关了。要「重开一个干净实例再截」时显式加 -Launch。
 param(
-    [string]$Exe = 'C:\Users\98201\WorkBuddy\spaces\2026_11_13_09-49-11\src\WorkPepTalk\bin\Debug\net8.0-windows\WorkPepTalk.exe',
-    [string]$Out = 'C:\Users\98201\WorkBuddy\spaces\2026_11_13_09-49-11\assets\screen-check.png',
+    [string]$Exe,
+    [string]$Out,
     [int]$KeepMs = 0,
     [switch]$Launch
 )
+
+$repo = Split-Path $PSScriptRoot -Parent
+if (-not $Exe) { $Exe = Join-Path $repo 'src\WorkPepTalk\bin\Debug\net8.0-windows\WorkPepTalk.exe' }
+if (-not $Out) { $Out = Join-Path $repo 'assets\screen-check.png' }
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms

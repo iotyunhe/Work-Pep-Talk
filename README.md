@@ -10,11 +10,11 @@
 
 **.NET 8 + WPF + WebView2**，界面用 HTML/CSS/JS 写在 `wwwroot/` 里。托盘、显示器、光标三块是手写的 Win32（`Interop/Shell.cs`），刻意不引 WinForms —— 原因见下面的「体积」一节。
 
-设计书最初定的是 Tauri 2.0，实际落地时改了。原因只有一条：
+设计书最初定的是 Tauri 2.0，落地时换成了 WPF。原因只有一条：
 
-> 这台机器上 Visual Studio 生成工具装了，但**缺 MSVC C++ 组件**（没有 `link.exe`、没有 Windows SDK），且实测外网速度约 140 KB/s。补齐 Tauri 所需的 Rust 工具链和 VS 组件要下 2–3 GB，不可行。
+> Tauri 要 Rust 工具链和 MSVC C++ 组件（`link.exe` + Windows SDK）。在只装了 .NET 8 SDK 的机器上补齐这两样，要额外下载 2–3 GB。
 
-而 .NET 8 SDK、WPF 模板、WebView2 运行时三样本机都已就位。换成 WPF 之后，设计书里最有价值的部分 —— 计算内核规格、状态机、配色算法、HTML 界面稿 —— 全部原样复用，只是外壳从 Rust 换成了 C#。
+换成 WPF 之后，设计书里最有价值的部分 —— 计算内核规格、状态机、配色算法、HTML 界面稿 —— 全部原样复用，只是外壳从 Rust 换成了 C#。
 
 产物差别：Tauri 约 5–10 MB 单文件；本方案 **自包含发布约 55 MB 单文件**（免安装、不依赖目标机环境），框架依赖发布约 1.8 MB 单文件（需目标机有 .NET 8 桌面运行时）。两种产物都是一整个 exe —— 界面已经嵌在程序集里，不需要旁边的 wwwroot 目录。
 
@@ -111,26 +111,6 @@ powershell scripts/make-icon.ps1
 
 ---
 
-## 仓库与推送
-
-仓库：<https://github.com/iotyunhe/Work-Pep-Talk>
-
-**必须走 SSH 推送。** 仓库属 `iotyunhe`，而 Windows 凭据管理器里存的 HTTPS 账号是 `luwinher`，用 HTTPS 推会直接 403：
-
-```
-remote: Permission to iotyunhe/Work-Pep-Talk.git denied to luwinher.
-fatal: ... The requested URL returned error: 403
-```
-
-`~/.ssh/config` 已把 `github.com` 指向 `~/.ssh/id_ed25519_iot`，这把密钥对应的正是 `iotyunhe` 账号，所以走 SSH 无需再做任何授权。
-
-```bash
-git remote set-url origin git@github.com:iotyunhe/Work-Pep-Talk.git
-git push
-```
-
----
-
 ## 首次使用
 
 第一次打开时**不会**直接显示一个算好的金额，而是弹出设置面板让你填。
@@ -215,7 +195,7 @@ git push
 - **B 极简仪表** —— 纯白细线、等宽数字、进度做成顶部一条 2px 水位线。
 - **C 像素小屋** —— 硬描边、块状进度条、像素脸、右下角硬阴影。
 
-九色背景（白黑赤橙黄绿青蓝紫）+ 自定义背景图。配色不写死九套，而是按 WCAG 相对亮度自动决定该配深字还是浅字；亮度判完之后再过一道 4.5:1 对比度兜底 —— 橙色 `#C97A2E` 亮度 0.29 会被判成深底配浅字，但实际对比度只有 2.9:1，字是糊的，所以翻转成深字。带自定义图时用 74% 底衬 + 18px 毛玻璃，再花的照片也吃不掉数字。
+九色背景（白黑赤橙黄绿青蓝紫）+ 自定义背景图。配色不写死九套，而是按 WCAG 相对亮度自动决定该配深字还是浅字；亮度判完之后再过一道 4.5:1 对比度兜底 —— 橙色 `#C97A2E` 亮度 0.29 会被判成深底配浅字，但实际对比度只有 2.9:1，字是糊的，所以翻转成深字。自定义图会先缩到长边 1200px 存成 JPEG（几 MB 的原图压到二三百 KB，顺带避开 Chromium 单个资源 URL 的长度上限），铺底后再压一层 55% 半透明衬底，再花的照片也吃不掉数字。
 
 六种状态各有表情和文案：未开工 / 刚开工 / 上班中 / 临近下班 / 加班中 / 已收工。语气按「正常时段报事实、加班允许尖锐」来写，不喊口号。
 
