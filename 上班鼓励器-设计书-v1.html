@@ -392,7 +392,7 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
   <table>
     <thead><tr><th style="width:24%">操作</th><th>结果</th></tr></thead>
     <tbody>
-      <tr><td>悬停</td><td>右上角浮出设置 / 收起 / 关闭三个图标，移开即隐。平时完全干净</td></tr>
+      <tr><td>右上角图标</td><td>常驻可见、不抢戏：<b>图钉</b>（窗口置顶开关，实心=已置顶／空心=不置顶）、<b>齿轮</b>（设置）、<b>横线</b>（收成圆球）。三个都是 11px 图标、17px 热区，按住它们不会拖动窗口</td></tr>
       <tr><td>按住拖动</td><td>移动窗口；松开时把坐标写进配置，下次开机回到原位</td></tr>
       <tr><td>双击头部</td><td>在「完整面板」与「56px 圆球」之间切换</td></tr>
       <tr><td>右键</td><td>弹菜单：设置 / 重置今日 / 临时穿透 / 隐藏 / 退出</td></tr>
@@ -532,6 +532,7 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
       <tr><td>15</td><td>首次使用引导</td><td>删掉 <code>config.json</code> 启动 → 直接弹出设置面板并高亮金额格，折算结果与挂件都是 <code>¥—</code>；填 15000 点「开始使用」→ 挂件显示日薪 681.82 / 时薪 85.23；重启不再弹面板</td></tr>
       <tr><td>16</td><td>齿轮按钮可点</td><td>点挂件右上角齿轮 → 窗口由 300×221 变为面板高度；拖动只发生在卡片空白处，按钮上的点击不被拖窗吃掉</td></tr>
       <tr><td>17</td><td>小屏适配</td><td>工作区高度不足时面板内部滚动，底部「开始使用」仍可滚到可见区域，不被顶出屏幕</td></tr>
+      <tr><td>18</td><td>图钉切换置顶</td><td>点右上角图钉 → 钉身由空心变实心（或反之），窗口置于最前/退出最前，<code>config.json</code> 的 <code>behaviour.alwaysOnTop</code> 同步翻转，托盘菜单的勾选状态一起变；重启后保持</td></tr>
     </tbody>
   </table>
 

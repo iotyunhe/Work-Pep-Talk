@@ -433,6 +433,19 @@ public partial class MainWindow : Window
                         SetWindowBackground(colorEl.GetString());
                     break;
 
+                /* 挂件右上角的钉子。和托盘菜单里的「窗口置顶」是同一个开关，
+                   改完必须 RefreshTrayState，否则托盘勾选状态会跟界面说的不一样。 */
+                case "toggleTopmost":
+                {
+                    var on = !_store.Current.Behaviour.AlwaysOnTop;
+                    _store.Current.Behaviour.AlwaysOnTop = on;
+                    _store.Save(_store.Current);
+                    ApplyTopmost(on);
+                    RefreshTrayState();
+                    SendToWeb("topmost", new { on });
+                    break;
+                }
+
                 case "menu":
                     ShowContextMenu();
                     break;
@@ -660,7 +673,16 @@ public partial class MainWindow : Window
 
     /* ---------------------------------------------------------- 行为 */
 
-    private void ApplyTopmost(bool on) => Topmost = on;
+    /*
+     * 置顶只走这一个出口：启动恢复、托盘菜单、挂件图钉、面板保存都汇到这里。
+     * 顺手记一行日志 —— 置顶是纯状态型设置，界面看不出异常时日志是唯一线索
+     * （比如「重启后置顶丢了」，看这行有没有在启动时出现就知道配置有没有读到）。
+     */
+    private void ApplyTopmost(bool on)
+    {
+        Topmost = on;
+        Log.Info("窗口置顶：" + (on ? "开" : "关"));
+    }
 
     private void ApplyClickThrough(bool on)
     {

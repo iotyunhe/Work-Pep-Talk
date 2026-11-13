@@ -136,6 +136,15 @@
   const ICON_FOLD =
     '<svg class="ic" viewBox="0 0 14 14"><path d="M2.5 7h9"/></svg>';
 
+  /*
+   * 图钉。钉身是个闭合梯形，未置顶时只有描边（空心钉），置顶时整块填充成
+   * 强调色 —— 空心/实心的差别比「颜色深浅」更容易在 11px 下被认出来。
+   */
+  const ICON_PIN =
+    '<svg class="ic ic-pin" viewBox="0 0 14 14">' +
+    '<path d="M3.8 2.5h6.4v1.2H8.8v2.9H5.2V3.7H3.8z"/>' +
+    '<path d="M7 6.6v5" fill="none"/></svg>';
+
   /* ---------------------------------------------------------- 挂件 */
 
   /*
@@ -186,6 +195,11 @@
         '<div class="wd-top">' +
           '<span class="wd-state"><i class="dot ' + dotCls + '"></i>' + stateText + '</span>' +
           '<span class="wd-tools">' +
+            '<span class="tool tool-pin' + (cfg.alwaysOnTop ? ' pin-on' : '') + '"' +
+              ' data-act="toggleTopmost" data-nodrag' +
+              ' title="' + (cfg.alwaysOnTop ? '已置顶，点击取消置顶' : '点击置顶') + '">' +
+              ICON_PIN +
+            '</span>' +
             '<span class="tool" data-act="settings" data-nodrag title="设置">' + ICON_GEAR + '</span>' +
             '<span class="tool" data-act="collapse" data-nodrag title="收起">' + ICON_FOLD + '</span>' +
           '</span>' +

@@ -77,11 +77,15 @@ body { user-select: none; -webkit-user-select: none; }
 
 .wd-tools {
   margin-left: auto; display: flex; gap: 8px;
-  /* 常驻可见但压得住。原来是 opacity:0 只在悬停显形 —— 用户根本不知道
-     右上角有设置入口，这也是「点了没反应」体感的一部分。 */
-  opacity: .42; transition: opacity .18s;
 }
-.wd:hover .wd-tools { opacity: 1; }
+/*
+ * 不用容器 opacity 压淡。
+ * 原来这里是 opacity:.42，会和图标自身的 ink3（约 .5 透明度）相乘，
+ * 实际只剩两成的可见度 —— 用户根本不知道右上角有入口。
+ * 更要紧的是父级 opacity 无法被子元素覆盖：置顶时那颗钉子会被一起压暗，
+ * 「点亮」的效果出不来。所以把淡放的职责交给 ink3，容器只负责排布。
+ */
+.wd:hover .wd-tools .ic { stroke: var(--wd-ink2); }
 .tool {
   display: block; line-height: 0; cursor: pointer;
   /* 图标 11px，热区撑到 17px：手指和触控板都更容易命中 */
@@ -94,6 +98,18 @@ body { user-select: none; -webkit-user-select: none; }
   transition: stroke .15s;
 }
 .tool:hover .ic { stroke: var(--wd-ink); }
+
+/*
+ * 置顶态：钉身填充成正文色。
+ * 不用 accent 是因为每个主题（尤其自定义背景图）的强调色对比度不定，
+ * 填成 --wd-ink 才能保证任何背景上都是"亮着"的。空心/实心的差别本身
+ * 也比颜色深浅更好认 —— 11px 下色差容易糊成一团。
+ * 特异性写到 3 个类，压过上面的 .tool:hover .ic。
+ */
+.tool.tool-pin.pin-on .ic {
+  fill: var(--wd-ink);
+  stroke: var(--wd-ink);
+}
 
 /* --- 主数字 */
 .wd-main { display: flex; align-items: center; gap: 12px; flex: none; }

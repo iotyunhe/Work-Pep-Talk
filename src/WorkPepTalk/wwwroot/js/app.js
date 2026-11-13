@@ -170,9 +170,35 @@
     if (a === 'settings') { openSettings(false); }
     else if (a === 'collapse') { setView('ball'); host.send({ type: 'collapse' }); }
     else if (a === 'expand') { setView('widget'); host.send({ type: 'expand' }); }
+    else if (a === 'toggleTopmost') {
+      /* 乐观切换：先把钉子点亮，点下去就立刻有反馈；宿主随后回 topmost
+         校正实际状态（比如窗口已不存在、或写盘失败要回滚）。 */
+      setPin(!cfg.alwaysOnTop);
+      host.send({ type: 'toggleTopmost' });
+    }
     /* 面板里的关闭按钮走这里，跟 panel.js 里的处理取同一个出口 */
     else if (a === 'closePanel') { closeSettings(); }
   });
+
+  /*
+   * 置顶开关的本地状态。只切 class、不整块重绘 —— 重绘会让挂件闪一下，
+   * 而这个按钮恰恰是按下去要"马上亮"的东西。
+   *
+   * rawCache 必须一起改：面板保存时是把 rawCache（原始嵌套结构）整份发给
+   * 宿主，漏改这里的话，用户切了置顶再打开面板点保存，就会被旧值覆盖回去。
+   */
+  function setPin(on) {
+    cfg.alwaysOnTop = on;
+
+    if (!rawCache) rawCache = deepClone(Core.DEFAULT_CONFIG);
+    if (!rawCache.behaviour) rawCache.behaviour = {};
+    rawCache.behaviour.alwaysOnTop = on;
+
+    const el = document.querySelector('[data-act="toggleTopmost"]');
+    if (!el) return;
+    el.classList.toggle('pin-on', on);
+    el.setAttribute('title', on ? '已置顶，点击取消置顶' : '点击置顶');
+  }
 
   /*
    * 拖动：交给宿主的系统级拖窗循环（ReleaseCapture + WM_NCLBUTTONDOWN）。
@@ -346,6 +372,9 @@
     } else if (msg.type === 'reloadConfig') {
       rawCache = msg.config ? deepClone(msg.config) : rawCache;
       applyConfig(rawCache);
+    } else if (msg.type === 'topmost') {
+      /* 宿主是置顶状态的唯一真相源：它回什么就是什么，覆盖乐观值 */
+      setPin(!!msg.on);
     }
   });
 
