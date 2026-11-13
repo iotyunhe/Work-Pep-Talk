@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>上班鼓励器 · UI 稿 v1</title>
+<style>
+:root{
+  --paper:#FBFAF7; --paper2:#F5F1E8; --ink:#1E1C19; --ink2:#4A4640; --ink3:#8A8378;
+  --line:#E8E2D6; --accent:#A8442A; --teal:#2F6B5E;
+  --sans:"Microsoft YaHei","PingFang SC",-apple-system,BlinkMacSystemFont,sans-serif;
+  --serif:Georgia,"Songti SC","SimSun",serif;
+  --mono:Consolas,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F1EEE7;color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.65;
+  padding:44px 32px 90px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--accent);margin-bottom:14px}
+h1{font-family:var(--serif);font-size:30px;font-weight:600;line-height:1.3;margin-bottom:10px}
+.lede{color:var(--ink2);max-width:44em;margin-bottom:6px}
+.meta{font-size:12.5px;color:var(--ink3);font-family:var(--mono);margin-top:14px}
+.sec{margin-top:52px}
+.sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+h2{font-family:var(--serif);font-size:18px;font-weight:600}
+.sec-n{font-family:var(--mono);font-size:11px;color:#fff;background:var(--ink);padding:2px 7px;border-radius:3px;letter-spacing:.06em}
+.sec-note{color:var(--ink3);font-size:12.5px;margin-bottom:20px;max-width:52em}
+
+/* ============ 桌面模拟 ============ */
+.desk{
+  position:relative;height:430px;border-radius:14px;overflow:hidden;
+  background:linear-gradient(150deg,#E9EFF4 0%,#DCE6EC 38%,#E6E4DC 72%,#EDE7DB 100%);
+  border:1px solid #DCD5C8;box-shadow:0 14px 40px rgba(90,78,60,.13);
+}
+.desk::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(120% 80% at 78% 88%,rgba(255,255,255,.55),transparent 60%);pointer-events:none}
+.desk-icons{position:absolute;left:20px;top:20px;display:flex;flex-direction:column;gap:14px}
+.di{width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,.62);
+  border:1px solid rgba(255,255,255,.9);box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.desk-win{position:absolute;left:110px;top:64px;width:430px;height:250px;border-radius:9px;
+  background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.9);
+  box-shadow:0 10px 30px rgba(60,50,40,.12);backdrop-filter:blur(3px);overflow:hidden}
+.dw-bar{height:30px;background:rgba(255,255,255,.7);border-bottom:1px solid rgba(0,0,0,.05);
+  display:flex;align-items:center;padding:0 12px;gap:6px}
+.dw-dot{width:8px;height:8px;border-radius:50%;background:#D9D4C9}
+.dw-lines{padding:18px 20px;display:flex;flex-direction:column;gap:9px}
+.dw-lines i{display:block;height:8px;border-radius:4px;background:#EDEAE2}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:40px;background:rgba(252,251,248,.78);
+  backdrop-filter:blur(14px);border-top:1px solid rgba(0,0,0,.05);display:flex;align-items:center;padding:0 16px;gap:10px}
+.tb-i{width:24px;height:24px;border-radius:6px;background:#E3DFD6}
+.tb-clock{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:#7C766B;text-align:right;line-height:1.35}
+.desk-label{position:absolute;left:18px;bottom:52px;font-family:var(--mono);font-size:10.5px;
+  color:#8A8378;letter-spacing:.1em}
+
+/* ============ 挂件本体 ============ */
+.wd{position:relative;width:300px;padding:12px 14px 13px;border-radius:16px;
+  font-family:var(--sans);color:var(--ink);user-select:none;
+  display:flex;flex-direction:column}
+.wd-desk{position:absolute;right:18px;bottom:58px}
+
+.wd-top{display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.wd-state{display:flex;align-items:center;gap:5px;font-size:10.5px;letter-spacing:.1em;
+  color:var(--wd-ink3,var(--ink3))}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--teal);flex:none}
+.dot.warn{background:#C98A5B}
+.dot.off{background:#C4BDB0}
+.wd-tools{margin-left:auto;display:flex;gap:9px;opacity:0;transition:opacity .2s}
+.wd:hover .wd-tools{opacity:1}
+.wd-tools svg{display:block;stroke:var(--wd-ink3,#9A9386);stroke-width:1.6;fill:none;stroke-linecap:round}
+.wd-tools svg:hover{stroke:var(--wd-ink,var(--ink))}
+
+.wd-main{display:flex;align-items:center;gap:12px}
+.wd-ava{width:56px;height:56px;flex:none;border-radius:14px;display:grid;place-items:center;overflow:hidden;
+  background:var(--wd-chip,#F5F1E8)}
+.wd-money{min-width:0}
+.wd-cap{font-size:10px;letter-spacing:.16em;color:var(--wd-ink3,var(--ink3));line-height:1.2;margin-bottom:1px;
+  display:flex;align-items:center;gap:5px}
+.lock{font-size:8.5px;letter-spacing:.04em;color:var(--wd-fill,#A8442A);
+  border:1px solid currentColor;border-radius:3px;padding:0 3px;line-height:1.4;opacity:.85}
+.wd-amt{font-family:var(--serif);font-size:28px;font-weight:600;line-height:1.06;
+  letter-spacing:-.5px;font-variant-numeric:tabular-nums;color:var(--wd-ink,var(--ink))}
+.wd-amt small{font-size:15px;font-weight:500;letter-spacing:0;margin-right:1px}
+
+.wd-derive{font-family:var(--mono);font-size:10.5px;color:var(--wd-ink3,var(--ink3));letter-spacing:.01em;
+  margin:8px 0 9px;padding-top:7px;border-top:1px dashed var(--wd-line,#E4DDCF)}
+.wd-derive b{color:var(--wd-ink2,var(--ink2));font-weight:600}
+
+.wd-rows{display:flex;gap:7px}
+.rw{flex:1;border-radius:8px;padding:5px 9px 6px;background:var(--wd-chip,var(--paper2))}
+.rw span{display:block;font-size:9.5px;letter-spacing:.08em;color:var(--wd-ink3,var(--ink3));line-height:1.4}
+.rw b{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;color:var(--wd-ink,var(--ink))}
+
+.wd-bar{height:4px;border-radius:4px;margin:10px 0 9px;overflow:hidden;
+  background:var(--wd-track,#EAE3D5)}
+.wd-bar i{display:block;height:100%;transition:width .5s linear;background:var(--wd-fill,#A8442A)}
+.wd-tip{font-size:11.5px;color:var(--wd-ink3,var(--ink3));line-height:1.5;margin-top:auto}
+
+/* --- 样式 A 纸质便签 --- */
+.wd-A{background:var(--wd-bg,var(--paper));border:1px solid var(--wd-edge,var(--line));
+  box-shadow:0 12px 30px rgba(74,62,48,.14),0 2px 6px rgba(74,62,48,.06)}
+.wd-A .wd-bar i{background:var(--wd-fill,#A8442A)}
+.wd-A .wd-tip{font-family:var(--serif);font-size:12px}
+
+/* --- 样式 B 极简仪表 --- */
+.wd-B{background:var(--wd-bg,#fff);border:1px solid var(--wd-edge,#ECEBE8);border-radius:12px;padding-top:15px;
+  box-shadow:0 10px 26px rgba(0,0,0,.08)}
+.wd-B .wd-ava{border-radius:10px;width:46px;height:46px;align-self:flex-start}
+.wd-B .wd-amt{font-family:var(--mono);font-size:25px;font-weight:600;letter-spacing:-.8px}
+.wd-B .wd-amt small{font-size:14px}
+.wd-B .wd-derive{border-top:1px solid var(--wd-line,#F1F0ED);margin:9px 0 2px;padding-top:8px}
+.wd-B .wd-rows{display:block}
+.wd-B .rw{display:flex;justify-content:space-between;align-items:baseline;
+  background:none;border-top:1px solid var(--wd-line,#F4F3F1);border-radius:0;padding:6px 1px 5px}
+.wd-B .rw:first-child{border-top:none}
+.wd-B .rw b{font-size:12.5px}
+.wd-B .wd-bar{position:absolute;left:0;right:0;top:0;height:2px;border-radius:0;
+  margin:0;background:var(--wd-track,#F4F4F2)}
+.wd-B .wd-bar i{border-radius:0;background:var(--wd-fill,var(--teal))}
+.wd-B .wd-tip{font-size:11px;color:var(--wd-ink3,#9B958C);padding-top:2px}
+.wd-B .dot{background:var(--teal)}
+
+/* --- 样式 C 像素小屋 --- */
+.wd-C{background:var(--wd-bg,#FFFDF6);border:2px solid var(--wd-strong,#1E1C19);border-radius:8px;
+  padding:10px 12px 11px;box-shadow:4px 4px 0 var(--wd-strong,#1E1C19)}
+.wd-C .wd-state{font-family:var(--mono);letter-spacing:.06em;color:var(--wd-ink,var(--ink))}
+.wd-C .wd-ava{border:1.5px solid var(--wd-strong,#1E1C19);border-radius:4px;width:52px;height:52px}
+.wd-C .wd-amt{font-family:var(--mono);font-size:23px;font-weight:700;letter-spacing:-.5px}
+.wd-C .wd-amt small{font-size:13px}
+.wd-C .wd-derive{font-family:var(--mono);border-top:1.5px dashed var(--wd-line,#C9BFA4)}
+.wd-C .rw{border:1.5px solid var(--wd-strong,#1E1C19);border-radius:3px}
+.wd-C .wd-bar{background:var(--wd-track,#EDE6D0);border:1.5px solid var(--wd-strong,#1E1C19);
+  height:8px;border-radius:2px;margin:9px 0 8px}
+.wd-C .wd-bar i{background:var(--wd-fill,#A8442A)}
+.wd-C .wd-tip{font-family:var(--mono);font-size:10px;line-height:1.6}
+
+/* --- 自定义背景图：毛玻璃衬底 --- */
+.wd-photo{background:rgba(251,250,247,.74);backdrop-filter:blur(18px) saturate(1.15);
+  border-color:rgba(255,255,255,.55)}
+
+/* ============ 收起态 ============ */
+.ball{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:var(--paper);border:1px solid var(--line);
+  box-shadow:0 8px 22px rgba(74,62,48,.18);position:relative}
+.ball-badge{position:absolute;right:-6px;bottom:-4px;background:var(--accent);color:#fff;
+  font-family:var(--mono);font-size:9.5px;padding:1px 5px;border-radius:8px;
+  box-shadow:0 2px 6px rgba(168,68,42,.4)}
+.ball-desk{position:absolute;right:336px;bottom:66px}
+.ball-row{display:flex;align-items:flex-start;gap:26px;margin-top:18px}
+
+/* ============ 设置面板 ============ */
+.panel{width:340px;background:var(--paper);border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 12px 30px rgba(74,62,48,.12);padding:16px 16px 14px}
+.pn-title{display:flex;align-items:center;margin-bottom:14px}
+.pn-title h3{font-family:var(--serif);font-size:15px;font-weight:600}
+.pn-title .x{margin-left:auto;color:#B4AC9E;font-family:var(--mono);font-size:13px}
+.pn-grp{font-size:10px;letter-spacing:.16em;color:var(--ink3);margin:14px 0 7px}
+.pn-grp:first-of-type{margin-top:0}
+.seg{display:flex;background:#F0EBE0;border-radius:8px;padding:3px;gap:2px}
+.seg b{flex:1;text-align:center;font-size:11.5px;font-weight:500;padding:5px 0;border-radius:6px;color:var(--ink3);cursor:pointer}
+.seg b.on{background:#fff;color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.inp{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);
+  border-radius:8px;padding:8px 10px;margin-top:8px}
+.inp span{font-size:11.5px;color:var(--ink3);flex:none}
+.inp b{font-family:var(--mono);font-size:15px;font-weight:600;margin-left:auto}
+.inp em{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--ink3)}
+.out{display:flex;gap:8px;margin-top:8px}
+.out div{flex:1;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.out span{display:block;font-size:9.5px;letter-spacing:.08em;color:var(--ink3)}
+.out b{font-family:var(--mono);font-size:14.5px;font-weight:600}
+.pn-line{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:11.5px;color:var(--ink2)}
+.pn-line .k{width:60px;flex:none;color:var(--ink3);font-size:11px}
+.pn-line .v{font-family:var(--mono);font-size:11.5px;background:#fff;border:1px solid var(--line);
+  border-radius:6px;padding:3px 8px}
+.pn-line .v.on{background:#F8EDE8;border-color:#E2C6B8;color:var(--accent);font-weight:600}
+.chk{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2);margin-top:9px}
+.box{width:13px;height:13px;border-radius:3px;border:1.4px solid #C9C1B2;flex:none;display:grid;place-items:center}
+.box.on{background:var(--accent);border-color:var(--accent)}
+.box.on::after{content:"";width:4.5px;height:2.5px;border-left:1.5px solid #fff;
+  border-bottom:1.5px solid #fff;transform:rotate(-45deg) translate(.5px,-1px)}
+
+/* ============ 背景色板 ============ */
+.sw-row{display:flex;align-items:center;gap:7px;margin-top:2px;flex-wrap:wrap}
+.sw{width:20px;height:20px;border-radius:50%;cursor:pointer;display:block;
+  border:1px solid rgba(30,28,25,.14);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.sw.on{outline:2px solid var(--accent);outline-offset:2px}
+.sw.up{background:#fff;border:1px dashed #C9C1B2;color:#9A9386;font-size:13px;
+  line-height:18px;text-align:center;font-style:normal;font-family:var(--sans)}
+.photo-stage{position:relative;padding:26px;border-radius:14px;overflow:hidden;
+  background:
+    radial-gradient(60% 80% at 18% 22%,#8FB3C9 0%,transparent 62%),
+    radial-gradient(55% 70% at 78% 30%,#E7C9A0 0%,transparent 60%),
+    radial-gradient(70% 90% at 60% 88%,#7E9B7A 0%,transparent 64%),
+    linear-gradient(160deg,#C8D6DE,#DCD2C2 55%,#B9C2B2);
+}
+.photo-stage::after{content:"示例背景图";position:absolute;right:20px;bottom:12px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:rgba(255,255,255,.9);
+  text-shadow:0 1px 3px rgba(0,0,0,.35)}
+
+/* ============ 布局 ============ */
+.gal{display:flex;gap:26px;flex-wrap:wrap;align-items:stretch}
+.gal figure{display:flex;flex-direction:column;gap:9px}
+.gal figure .wd{height:100%}
+.gal figcaption{font-family:var(--mono);font-size:10.5px;color:var(--ink3);letter-spacing:.06em}
+.gal figcaption b{color:var(--ink);font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:0;display:block;margin-bottom:1px}
+.mtx{display:grid;grid-template-columns:repeat(3,300px);gap:22px 26px}
+.mtx figure{display:flex;flex-direction:column;gap:9px}
+.mtx figcaption{font-family:var(--mono);font-size:10.5px;color:var(--ink3);letter-spacing:.06em}
+.mtx figcaption b{color:var(--ink);font-family:var(--sans);font-size:12px;font-weight:600;
+  letter-spacing:0;display:block;margin-bottom:1px}
+.note-box{margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:10px;
+  padding:16px 18px;font-size:13px;color:var(--ink2);line-height:1.85}
+.note-box b{color:var(--ink)}
+.note-box .q{color:var(--accent)}
+
+/* 状态色 */
+.st-before .dot{background:#C4BDB0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">WIDGET / UI 稿 v1</div>
+  <h1>上班鼓励器 · 桌面挂件界面</h1>
+  <p class="lede">右下角常驻、置顶、可换形象。核心不是"还剩多久下班"——是一串每隔一秒自己往上跳的钱数。差额感知比倒计时有用得多。</p>
+  <div class="meta">尺寸 300×200 · 收起态 56×56 · 三套视觉方向待定 · 数字为实时演算非截图</div>
+
+  <!-- 01 桌面效果 -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-n">01</span><h2>桌面实际效果（1:1）</h2></div>
+    <p class="sec-note">挂在任务栏上方 18px 处。鼠标移上去才浮出设置/收起/关闭三个图标，平时完全干净。左侧是收起态圆球。</p>
+    <div class="desk" id="desk">
+      <div class="desk-icons"><i class="di"></i><i class="di"></i><i class="di"></i></div>
+      <div class="desk-win">
+        <div class="dw-bar"><i class="dw-dot"></i><i class="dw-dot"></i><i class="dw-dot"></i></div>
+        <div class="dw-lines">
+          <i style="width:72%"></i><i style="width:88%"></i><i style="width:46%"></i>
+          <i style="width:64%;margin-top:12px"></i><i style="width:80%"></i><i style="width:38%"></i>
+          <i style="width:56%"></i>
+        </div>
+      </div>
+      <div class="desk-label">其他工作窗口</div>
+      <div id="ballDock" class="ball-desk"></div>
+      <div id="wdDock" class="wd-desk"></div>
+      <div class="taskbar">
+        <i class="tb-i"></i><i class="tb-i"></i><i class="tb-i"></i><i class="tb-i"></i>
+        <div class="tb-clock"><div id="sysClock">14:12</div><div>2026/11/13</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 三套视觉 -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-n">02</span><h2>三套视觉方向（同一份数据）</h2></div>
+    <p class="sec-note">三套都能实现，成本差不多。差别是"你愿意它一天在屏幕上待八小时还不烦"。A 最耐看，B 最不抢眼，C 最有趣但看久了会腻。</p>
+    <div class="gal" id="gal"></div>
+  </section>
+
+  <!-- 03 状态 -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-n">03</span><h2>六种状态：形象与文案随之变化</h2></div>
+    <p class="sec-note">形象不是装饰，它是"今天进度"的另一种读数。图标颜色也随状态变：绿=正常、橙=临近/加班、灰=未开工/收工。</p>
+    <div class="mtx" id="mtx"></div>
+    <div class="note-box">
+      <b>文案策略：</b>不说"加油""努力"这类空话，只说事实——<span class="q">"已经赚了一顿午饭"</span>、<span class="q">"剩下 47 分钟，等于 36 块"</span>。把抽象时间换成具体金额，这是这个产品唯一真正有效的鼓励方式。
+    </div>
+  </section>
+
+  <!-- 04 背景 -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-n">04</span><h2>背景：七色光 + 白 + 黑，或自定义图</h2></div>
+    <p class="sec-note">背景不是换一层底色就完事。每选一个色，文字色、分隔线、进度条颜色整套跟着重算——按背景的相对亮度自动切深字/浅字，保证最低 4.5:1 对比度。黄色底会自动配深字并换掉红色进度条。</p>
+    <div class="mtx" id="bgGrid"></div>
+    <div class="note-box" style="margin-top:22px">
+      <b>自定义背景图：</b>上传后垫一层 74% 半透明底色 + 18px 毛玻璃，图片再花也不会吃掉数字。<span class="q">下图右侧是同一张挂件压在一张风景图上的效果</span>——注意它的可读性和纯色底完全一致。
+    </div>
+    <div class="gal" style="margin-top:22px" id="photoDemo"></div>
+  </section>
+
+  <!-- 05 收起态 + 设置 -->
+  <section class="sec">
+    <div class="sec-h"><span class="sec-n">05</span><h2>收起态与设置面板</h2></div>
+    <p class="sec-note">开会、投屏、专注时收成一颗球，右下角仍然有一串小数字在涨。设置面板首次启动强制走一遍，之后右键进入。</p>
+    <div class="gal">
+      <figure>
+        <div class="ball-row">
+          <div id="ballGal"></div>
+          <div class="panel" id="panel"></div>
+        </div>
+        <figcaption><b>56px 圆球 + 设置面板 340px</b>圆球悬停展开，双击还原主面板</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="note-box" style="margin-top:40px">
+    <b>这一版稿子里已经定死的东西：</b>①主数字是"今天已赚"，不是倒计时；②日薪/时薪固定显示，满足随时核对；③已工作与距下班并排，字号小于金额，不抢主视觉；④进度条用颜色渐变而不是百分比数字，减少"盯着看"的焦虑；⑤三套样式共用同一套 DOM 结构，换肤只换 CSS。
+  </div>
+
+</div>
+
+<script>
+/* ================= 计算内核（唯一真实来源） ================= */
+const CFG = {
+  mode:'monthly',      // monthly | daily | hourly
+  value:8000,
+  daysPerMonth:22,
+  hoursPerDay:8,
+  startMin:9*60,
+  endMin:18*60,
+  lunchStart:12*60,
+  lunchEnd:13*60,
+  excludeLunch:true,
+  otMult:1
+};
+
+function derive(){
+  const daily = CFG.mode==='monthly' ? CFG.value/CFG.daysPerMonth
+              : CFG.mode==='daily'   ? CFG.value
+              : CFG.value*CFG.hoursPerDay;
+  const hourly = daily/CFG.hoursPerDay;
+  return {daily, hourly};
+}
+
+function segments(){
+  const s=CFG.startMin, e=CFG.endMin, ls=CFG.lunchStart, le=CFG.lunchEnd;
+  if(CFG.excludeLunch && ls>s && le<e) return [[s,ls],[le,e]];
+  return [[s,e]];
+}
+
+function totalSec(){ return segments().reduce((a,[s,e])=>a+(e-s)*60,0); }
+
+function workedSec(nowMin){
+  return segments().reduce((a,[s,e])=>a+Math.max(0,Math.min(nowMin,e)-s)*60,0);
+}
+
+function compute(nowMin){
+  const {daily,hourly} = derive();
+  const total = totalSec();
+  const worked = Math.min(workedSec(nowMin), total);
+  const otSec = Math.max(0,(nowMin-CFG.endMin)*60);
+  // 决策：下班后金额停止累计，锁在日薪；加班只记时长，不计钱
+  const earned = hourly/3600*worked;
+  const remain = Math.max(0, total-worked);
+  const progress = total>0 ? Math.min(1, worked/total) : 1;
+  let phase='working';
+  if(nowMin < CFG.startMin) phase='before';
+  else if(otSec>0) phase='overtime';
+  const leftMin = CFG.endMin-nowMin;
+  return {daily,hourly,total,worked,otSec,earned,remain,progress,phase,leftMin};
+}
+
+function hms(sec){
+  sec=Math.max(0,Math.floor(sec));
+  const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=sec%60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function yuan(v){ return v.toFixed(2); }
+
+/* ================= 背景：9 色预设 + 自定义图 ================= */
+const BG_PRESETS = [
+  {id:'white', name:'白', hex:'#FBFAF7'},
+  {id:'black', name:'黑', hex:'#181715'},
+  {id:'red',   name:'赤', hex:'#B23A2C'},
+  {id:'orange',name:'橙', hex:'#C97A2E'},
+  {id:'yellow',name:'黄', hex:'#E3B93F'},
+  {id:'green', name:'绿', hex:'#3C7F55'},
+  {id:'cyan',  name:'青', hex:'#2C7E82'},
+  {id:'blue',  name:'蓝', hex:'#37629A'},
+  {id:'purple',name:'紫', hex:'#63497F'}
+];
+
+/* 相对亮度（WCAG）：决定这个背景该配深字还是浅字 */
+function lum(hex){
+  const n = parseInt(hex.slice(1),16);
+  const f = v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); };
+  return 0.2126*f((n>>16)&255) + 0.7152*f((n>>8)&255) + 0.0722*f(n&255);
+}
+
+/* 一套背景色 → 一整套 token。深底自动反色，彩色底自动挑高对比强调色 */
+function bgTokens(id){
+  const p = BG_PRESETS.find(b=>b.id===id) || BG_PRESETS[0];
+  const L = lum(p.hex);
+  const dark = L < 0.42;
+  const t = {
+    '--wd-bg': p.hex,
+    '--wd-ink':  dark ? '#F7F3E9' : '#1E1C19',
+    '--wd-ink2': dark ? 'rgba(247,243,233,.76)' : 'rgba(30,28,25,.74)',
+    '--wd-ink3': dark ? 'rgba(247,243,233,.54)' : 'rgba(30,28,25,.46)',
+    '--wd-chip': dark ? 'rgba(255,255,255,.10)' : 'rgba(30,28,25,.045)',
+    '--wd-track':dark ? 'rgba(255,255,255,.17)' : 'rgba(30,28,25,.09)',
+    '--wd-line': dark ? 'rgba(255,255,255,.17)' : 'rgba(30,28,25,.10)',
+    '--wd-edge': dark ? 'rgba(255,255,255,.20)' : 'rgba(30,28,25,.10)',
+    '--wd-strong': dark ? 'rgba(255,255,255,.85)' : '#1E1C19',
+    '--wd-fill': dark ? 'rgba(255,255,255,.80)' : '#A8442A'
+  };
+  // 白/黄这类极亮底，朱红填充不够跳，换成青绿
+  if(!dark && (id==='yellow')) t['--wd-fill'] = '#2F6B5E';
+  return t;
+}
+function tokenStr(t){
+  return Object.keys(t).map(k=>k+':'+t[k]).join(';');
+}
+
+/* ================= 状态外观 ================= */
+const MOODS = {
+  before:  {state:'未开工',   dot:'off',  text:'还没开工。先把水倒上。'},
+  early:   {state:'上班中',   dot:'ok',   text:'开局。今天第一块钱已经到账。'},
+  mid:     {state:'上班中',   dot:'ok',   text:'已经赚了一顿午饭。'},
+  late:    {state:'临近下班', dot:'warn', text:'最后一段。剩下的时间在打折。'},
+  overtime:{state:'加班中',   dot:'warn', text:'加班中。每一秒都是加价出售的。'},
+  done:    {state:'已收工',   dot:'off',  text:'今天到此为止。钱已经落袋。'}
+};
+
+function moodOf(c){
+  if(c.phase==='before') return 'before';
+  if(c.phase==='overtime') return 'overtime';
+  if(c.progress>=0.999) return 'done';
+  if(c.progress>=0.8) return 'late';
+  if(c.progress<=0.12) return 'early';
+  return 'mid';
+}
+
+/* ================= 形象（内联 SVG） ================= */
+function avatar(mood, style){
+  const skin = style==='C' ? '#F6E3C8' : '#F0DBC1';
+  const ink  = '#2A2620';
+  const stroke = style==='C' ? 0 : 1.8;
+  let face='';
+  if(mood==='before'){
+    face = `<path d="M20.5 30 h7" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>
+            <path d="M36.5 30 h7" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="32" cy="38" r="2.2" fill="none" stroke="${ink}" stroke-width="1.6"/>`;
+  } else if(mood==='early'){
+    face = `<circle cx="24" cy="30" r="2.4" fill="${ink}"/><circle cx="40" cy="30" r="2.4" fill="${ink}"/>
+            <path d="M28 37.5 q4 3 8 0" stroke="${ink}" stroke-width="1.9" fill="none" stroke-linecap="round"/>`;
+  } else if(mood==='mid'){
+    face = `<path d="M20 29 q4 -4 8 0" stroke="${ink}" stroke-width="2.1" fill="none" stroke-linecap="round"/>
+            <path d="M36 29 q4 -4 8 0" stroke="${ink}" stroke-width="2.1" fill="none" stroke-linecap="round"/>
+            <path d="M27.5 37 q4.5 4.5 9 0" stroke="${ink}" stroke-width="1.9" fill="none" stroke-linecap="round"/>`;
+  } else if(mood==='late'){
+    face = `<path d="M20.5 30 h7" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>
+            <path d="M36.5 30 h7" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>
+            <path d="M28 38 q4 2 8 0" stroke="${ink}" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            <circle cx="24" cy="34.5" r="1.2" fill="#C98A5B" opacity=".85"/>`;
+  } else if(mood==='overtime'){
+    face = `<path d="M20.5 31 l7 -4 M20.5 27 l7 4" stroke="${ink}" stroke-width="1.9" stroke-linecap="round"/>
+            <path d="M36.5 27 l7 4 M36.5 31 l7 -4" stroke="${ink}" stroke-width="1.9" stroke-linecap="round"/>
+            <path d="M28 39 h8" stroke="${ink}" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M47 33 q3 4 0 5 q-3 -1 0 -5" fill="#7FA8C9" stroke="${ink}" stroke-width="1.1"/>`;
+  } else {
+    face = `<path d="M20 28 q4 -5 8 0" stroke="${ink}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M36 28 q4 -5 8 0" stroke="${ink}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M26.5 36 q5.5 6 11 0 z" fill="#C86A55" stroke="${ink}" stroke-width="1.6" stroke-linejoin="round"/>`;
+  }
+  const spark = (mood==='done')
+    ? `<path d="M14 16 l2 4 l4 1 l-4 1.5 l-2 4 l-1.5 -4 l-4 -1.5 l4 -1 z" fill="#E0A24E"/>`
+    : '';
+  const zzz = (mood==='late'||mood==='overtime')
+    ? `<text x="46" y="20" font-size="9" fill="#9A9386" font-family="monospace">z</text>
+       <text x="52" y="14" font-size="7" fill="#BEB6A8" font-family="monospace">z</text>` : '';
+  if(style==='C'){
+    const px = (mood==='before'||mood==='late'||mood==='overtime')
+      ? `<rect x="22" y="27" width="7" height="3" fill="${ink}"/><rect x="35" y="27" width="7" height="3" fill="${ink}"/>`
+      : `<rect x="22" y="24" width="7" height="7" fill="${ink}"/><rect x="35" y="24" width="7" height="7" fill="${ink}"/>`;
+    const pm = (mood==='done')
+      ? `<rect x="27" y="38" width="10" height="6" fill="#C86A55" stroke="${ink}" stroke-width="1.8"/>`
+      : `<rect x="28" y="40" width="8" height="3" fill="${ink}"/>`;
+    return `<svg width="46" height="46" viewBox="0 0 64 64" shape-rendering="crispEdges">
+      <rect x="12" y="16" width="40" height="38" rx="5" fill="${skin}" stroke="${ink}" stroke-width="3"/>
+      <rect x="16" y="34" width="5" height="5" fill="#EDA893"/>
+      <rect x="43" y="34" width="5" height="5" fill="#EDA893"/>
+      ${px}${pm}
+    </svg>`;
+  }
+  return `<svg width="52" height="52" viewBox="0 0 64 64">
+    ${spark}
+    <ellipse cx="32" cy="35" rx="21" ry="19" fill="${skin}" stroke="${ink}" stroke-width="${stroke}"/>
+    <ellipse cx="26" cy="24" rx="5" ry="3" fill="#fff" opacity=".55"/>
+    ${face}${zzz}
+  </svg>`;
+}
+
+/* ================= 挂件渲染 ================= */
+const ICONS = `
+  <svg width="11" height="11" viewBox="0 0 12 12"><circle cx="6" cy="6" r="2.1"/>
+  <path d="M6 1v1.6M6 9.4V11M1 6h1.6M9.4 6H11M2.5 2.5l1.1 1.1M8.4 8.4l1.1 1.1M9.5 2.5L8.4 3.6M3.6 8.4L2.5 9.5"/></svg>
+  <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6h8"/></svg>
+  <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>`;
+
+function widget(c, style, bg){
+  const m = MOODS[moodOf(c)];
+  const dotCls = m.dot==='ok' ? '' : m.dot;
+  const deskSec = c.worked + c.otSec;
+  const isOt = c.phase==='overtime';
+  const tip = isOt ? `加班 ${hms(c.otSec)}，这段时间没有钱。` : m.text;
+  const photo = bg==='photo';
+  const tk = photo ? '' : tokenStr(bgTokens(bg||'white'));
+  return `<div class="wd wd-${style} ${photo?'wd-photo':''} st-${moodOf(c)}" style="${tk}">
+    <div class="wd-top">
+      <span class="wd-state"><i class="dot ${dotCls}"></i>${m.state}</span>
+      <span class="wd-tools">${ICONS}</span>
+    </div>
+    <div class="wd-main">
+      <div class="wd-ava">${avatar(moodOf(c), style)}</div>
+      <div class="wd-money">
+        <div class="wd-cap">今天已赚${isOt?'<span class="lock">已锁定</span>':''}</div>
+        <div class="wd-amt"><small>¥</small>${yuan(c.earned)}</div>
+      </div>
+    </div>
+    <div class="wd-derive">日薪 <b>¥${yuan(c.daily)}</b> · 时薪 <b>¥${yuan(c.hourly)}</b></div>
+    <div class="wd-rows">
+      <div class="rw"><span>已工作</span><b>${hms(deskSec)}</b></div>
+      <div class="rw"><span>${c.phase==='overtime'?'已加班':'距下班'}</span><b>${hms(c.phase==='overtime'?c.otSec:c.remain)}</b></div>
+    </div>
+    <div class="wd-bar"><i style="width:${(c.progress*100).toFixed(1)}%"></i></div>
+    <div class="wd-tip">${tip}</div>
+  </div>`;
+}
+
+function ball(c){
+  return `<div class="ball"><svg width="30" height="30" viewBox="0 0 64 64">
+      <ellipse cx="32" cy="35" rx="21" ry="19" fill="#F0DBC1" stroke="#2A2620" stroke-width="1.8"/>
+      <circle cx="24" cy="30" r="2.4" fill="#2A2620"/><circle cx="40" cy="30" r="2.4" fill="#2A2620"/>
+      <path d="M28 37.5 q4 3 8 0" stroke="#2A2620" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+    </svg><span class="ball-badge">¥${Math.round(c.earned)}</span></div>`;
+}
+
+/* ================= 设置面板 ================= */
+function settingsPanel(c){
+  return `
+    <div class="pn-title"><h3>设置</h3><span class="x">✕</span></div>
+    <div class="pn-grp">收入口径</div>
+    <div class="seg"><b class="on">月薪</b><b>日薪</b><b>时薪</b></div>
+    <div class="inp"><span>金额</span><b>8000</b><em>元 / 月</em></div>
+    <div class="pn-grp">折算结果</div>
+    <div class="out">
+      <div><span>日薪</span><b>¥${yuan(c.daily)}</b></div>
+      <div><span>时薪</span><b>¥${yuan(c.hourly)}</b></div>
+    </div>
+    <div class="pn-grp">工时设定</div>
+    <div class="pn-line"><span class="k">每月工作日</span><span class="v">22</span>
+      <span style="color:#B4AC9E;font-size:10.5px">天 · 可自行填写</span></div>
+    <div class="pn-line"><span class="k">每日工时</span><span class="v">8 小时</span></div>
+    <div class="pn-line"><span class="k">上班</span><span class="v">09:00</span>
+      <span class="k" style="width:auto">下班</span><span class="v">18:00</span></div>
+    <div class="pn-line"><span class="k">午休</span><span class="v">12:00 – 13:00</span>
+      <span class="chk" style="margin:0"><i class="box on"></i>不计工时</span></div>
+    <div class="pn-grp">外观与行为</div>
+    <div class="pn-line"><span class="k">形象</span><span class="v">团子</span>
+      <span class="v" style="opacity:.45">图片</span><span class="v" style="opacity:.45">Live2D</span></div>
+    <div class="pn-line"><span class="k">主题</span><span class="v on">纸质</span>
+      <span class="v">仪表</span><span class="v">像素</span></div>
+    <div class="pn-line" style="align-items:flex-start"><span class="k" style="padding-top:4px">背景</span>
+      <span class="sw-row">${
+        BG_PRESETS.map(b=>`<i class="sw${b.id==='white'?' on':''}" style="background:${b.hex}" title="${b.name}"></i>`).join('')
+      }<i class="sw up" title="上传图片">+</i></span></div>
+    <div class="pn-line"><span class="k">自定义图</span>
+      <span class="v" style="color:#B4AC9E">未上传</span>
+      <span style="color:#B4AC9E;font-size:10.5px">PNG / JPG / GIF</span></div>
+    <div class="chk"><i class="box on"></i>窗口置顶</div>
+    <div class="chk"><i class="box"></i>鼠标点击穿透</div>
+    <div class="chk"><i class="box on"></i>开机自动启动</div>
+  `;
+}
+
+/* ================= 时间推进 ================= */
+let nowSec = 14*3600 + 12*60 + 33;
+const TIME_LABELS = {
+  before:  [8*3600+52*60+10, '08:52'],
+  early:   [9*3600+38*60+20, '09:38'],
+  mid:     [14*3600+12*60+33,'14:12'],
+  late:    [17*3600+22*60+8, '17:22'],
+  overtime:[19*3600+6*60+44, '19:06'],
+  done:    [18*3600+0*60+0,  '18:00']
+};
+
+function sampleFor(key){ return TIME_LABELS[key][0]; }   // 秒
+function sampleMin(key){ return sampleFor(key)/60; }     // compute() 接受分钟
+
+/* 初始化静态画廊 */
+function buildGalleries(){
+  const midC = compute(sampleMin('mid'));
+  document.getElementById('gal').innerHTML = ['A','B','C'].map(s=>{
+    const names = {A:'A · 纸质便签',B:'B · 极简仪表',C:'C · 像素小屋'};
+    const desc  = {A:'暖白纸感，衬线数字，温柔耐看',B:'纯白细线，等宽数字，最不抢眼',C:'硬描边，块状进度，最有游戏感'};
+    return `<figure>${widget(midC,s)}<figcaption><b>${names[s]}</b>${desc[s]}</figcaption></figure>`;
+  }).join('');
+
+  document.getElementById('mtx').innerHTML = ['before','early','mid','late','overtime','done'].map(k=>{
+    const c = compute(sampleMin(k));
+    return `<figure>${widget(c,'A')}<figcaption><b>${MOODS[k].state}</b>此刻 ${TIME_LABELS[k][1]}</figcaption></figure>`;
+  }).join('');
+
+  /* 9 色背景 */
+  document.getElementById('bgGrid').innerHTML = BG_PRESETS.map(b=>{
+    const L = lum(b.hex);
+    return `<figure>${widget(midC,'A',b.id)}
+      <figcaption><b>${b.name}　${b.hex.toUpperCase()}</b>
+      亮度 ${L.toFixed(2)} · 自动配${L<0.42?'浅':'深'}字</figcaption></figure>`;
+  }).join('');
+
+  /* 自定义背景图 */
+  document.getElementById('photoDemo').innerHTML =
+    `<figure><div class="photo-stage">${widget(midC,'A','photo')}</div>
+      <figcaption><b>自定义背景图</b>74% 底衬 + 18px 毛玻璃，任何图片都不会吃掉数字</figcaption></figure>`;
+
+  document.getElementById('panel').innerHTML = settingsPanel(midC);
+  document.getElementById('ballGal').innerHTML = ball(midC);
+}
+
+/* 桌面实时 */
+function tickDesk(){
+  nowSec += 1;
+  const nowMin = nowSec/60;
+  const c = compute(nowMin);
+  document.getElementById('wdDock').innerHTML = widget(c,'A');
+  document.getElementById('ballDock').innerHTML = ball(c);
+  const t = new Date(2000,0,1,Math.floor(nowSec/3600)%24,Math.floor(nowSec%3600/60),nowSec%60);
+  document.getElementById('sysClock').textContent =
+    String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+}
+
+buildGalleries();
+tickDesk();
+setInterval(tickDesk, 1000);
+</script>
+</body>
+</html>
