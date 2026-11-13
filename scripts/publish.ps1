@@ -1,4 +1,4 @@
-# 上班鼓励器 · 绿色版打包
+﻿# 上班鼓励器 · 绿色版打包
 #
 #   pwsh scripts/publish.ps1              # 默认自包含单文件（约 65MB，免安装）
 #   pwsh scripts/publish.ps1 -Framework   # 框架依赖（约 5MB，需目标机有 .NET 8）
@@ -42,7 +42,13 @@ Write-Host "开始打包..." -ForegroundColor Cyan
 if ($LASTEXITCODE -ne 0) { throw "打包失败，退出码 $LASTEXITCODE" }
 
 # 清掉自包含发布里那些用不上的调试符号
-Get-ChildItem $out -Filter *.pdb -ErrorAction SilentlyContinue | Remove-Item -Force
+$pdbs = Get-ChildItem $out -Filter *.pdb -ErrorAction SilentlyContinue
+if ($pdbs) { $pdbs | Remove-Item -Force }
+
+# XML 文档注释对运行没用，删掉省 800KB
+$xmls = Get-ChildItem $out -Filter *.xml -ErrorAction SilentlyContinue
+if ($xmls) { $xmls | Remove-Item -Force }
+if ($pdbs) { $pdbs | Remove-Item -Force }
 
 # 附一份空的默认配置：首次运行时程序自己会生成，这里放一份便于用户直接改
 $cfg = Join-Path $out 'config.json'

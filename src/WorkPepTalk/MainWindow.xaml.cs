@@ -130,7 +130,35 @@ public partial class MainWindow : Window
             var dataDir = Path.Combine(AppContext.BaseDirectory, "WebView2Data");
             Directory.CreateDirectory(dataDir);
 
-            var env = await CoreWebView2Environment.CreateAsync(null, dataDir);
+            /*
+             * 挂件只需要画一小块静态内容，但 WebView2 默认会起一整套浏览器进程组。
+             * 这里逐条关掉用不上的东西，只为压低常驻内存：
+             *   - 后台网络 / 组件更新 / 同步 / 崩溃上报：挂件不联网，全关
+             *   - 侧边栏、购物、收藏等 Edge 特性：一个都用不到
+             *   - V8 堆上限 64MB：页面只有几百行 JS，给再多也是浪费
+             *   - 渲染进程限 1 个：只有一个页面，不需要多渲染器
+             */
+            var options = new CoreWebView2EnvironmentOptions
+            {
+                AdditionalBrowserArguments = string.Join(" ",
+                    "--disable-features=msEdgeSidebarV2,msEdgeCollections,msEdgeShoppingAssistant," +
+                    "msEdgeAutofill,msEdgeDiscover,msIdentityFeatures",
+                    "--disable-background-networking",
+                    "--disable-component-update",
+                    "--disable-sync",
+                    "--disable-breakpad",
+                    "--disable-domain-reliability",
+                    "--disable-client-side-phishing-detection",
+                    "--no-first-run",
+                    "--js-flags=--max-old-space-size=64",
+                    "--renderer-process-limit=1",
+                    /* 挂件是静态文字和一根进度条，用不着 GPU 合成。
+                       关掉能省掉独立 GPU 进程和一块显存。 */
+                    "--disable-gpu",
+                    "--disable-gpu-compositing")
+            };
+
+            var env = await CoreWebView2Environment.CreateAsync(null, dataDir, options);
             await Web.EnsureCoreWebView2Async(env);
 
             var core = Web.CoreWebView2;
@@ -552,6 +580,13 @@ public partial class MainWindow : Window
         using var fs = File.Create(path);
         await Web.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, fs);
         return path;
+    }
+
+    /// <summary>调试用：在页面里执行一段 JS，用于验证交互路径。</summary>
+    public async Task<string> EvalAsync(string js)
+    {
+        if (Web.CoreWebView2 is null) return "(未就绪)";
+        return await Web.CoreWebView2.ExecuteScriptAsync(js);
     }
 #endif
 }

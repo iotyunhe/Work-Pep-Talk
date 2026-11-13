@@ -67,13 +67,19 @@ public partial class App : System.Windows.Application
         if (idx >= 0 && idx + 1 < e.Args.Length)
         {
             var outPath = e.Args[idx + 1];
-            _ = CaptureAndQuitAsync(win, outPath);
+            _ = CaptureAndQuitAsync(win, outPath, EvalFromArgs(e.Args));
         }
 #endif
     }
 
 #if DEBUG
-    private static async Task CaptureAndQuitAsync(MainWindow win, string outPath)
+    private static string? EvalFromArgs(string[] args)
+    {
+        var i = Array.IndexOf(args, "--eval");
+        return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+    }
+
+    private static async Task CaptureAndQuitAsync(MainWindow win, string outPath, string? evalJs)
     {
         try
         {
@@ -84,6 +90,14 @@ public partial class App : System.Windows.Application
             if (!loaded) Log.Warn("等待页面加载超时（15s），仍尝试截图");
 
             await Task.Delay(900);           // 再留一帧给字体和布局
+
+            if (!string.IsNullOrWhiteSpace(evalJs))
+            {
+                var r = await win.EvalAsync(evalJs);
+                Log.Info("执行 JS → " + r);
+                await Task.Delay(1200);      // 等界面按新配置重绘完
+            }
+
             var p = await win.CaptureAsync(outPath);
             Log.Info("已截图：" + (p ?? "(失败)"));
         }
