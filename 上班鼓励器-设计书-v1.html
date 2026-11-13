@@ -535,6 +535,7 @@ progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span
       <tr><td>18</td><td>图钉切换置顶</td><td>点右上角图钉 → 钉身由空心变实心（或反之），窗口置于最前/退出最前，<code>config.json</code> 的 <code>behaviour.alwaysOnTop</code> 同步翻转，托盘菜单的勾选状态一起变；重启后保持</td></tr>
       <tr><td>19</td><td>面板输入不失焦</td><td>点开金额框后光标常驻，连续输入 <code>15000</code> 不打嗝；输入过程中日薪/时薪每秒跟着更新，但输入框节点不被替换（<code>document.activeElement</code> 仍是它，<code>:focus-within</code> 高亮不灭）。改背景色、切口径这类必须重绘的点击，只重建面板、保留滚动位置</td></tr>
       <tr><td>20</td><td>自定义背景图</td><td>点「+」弹出系统选图框（由宿主弹，不是 WebView2 自带的选择器）；选一张图后挂件用图铺底、面板显示「已设置」并出现「清除」。把图片文件直接拖到挂件上同样生效。两种情况都写进 <code>config.json</code> 的 <code>look.bgImage</code>（data URL），挪动目录后图不丢</td></tr>
+      <tr><td>21</td><td>卡片顶部无白边</td><td>主题 B 顶部那道细线是「今天过了多少」的进度条，不是描边：左右各内缩 10px、两端 2px 圆角、填充压到四五成，轨道用 <code>--wd-track</code>。截图核对：卡片第 1 行只有 1px 的 <code>--wd-edge</code> 描边（深底即 <code>rgba(255,255,255,.20)</code>，青底上呈 86,151,155），往下 2–6 行是纯底色，进度条落在第 7–9 行且不贴左右边缘。修复前是 3px 通栏 <code>rgba(255,255,255,.8)</code>（呈 220,233,234，近白），叠上描边共 4px 亮条压在顶边</td></tr>
     </tbody>
   </table>
 

@@ -18,13 +18,28 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
-        /* 单实例：开机自启 + 手动双击很容易起两份，两份会抢同一个 config.json */
-        _single = new Mutex(true, @"Local\WorkPepTalk.SingleInstance", out var created);
-        if (!created)
+        /*
+         * 单实例：开机自启 + 手动双击很容易起两份，两份会抢同一个 config.json。
+         *
+         * 例外：--shot 起的是一次性渲染进程（截完即退，读写自己目录下的配置），
+         * 不该为了一次像素核对就把用户正在用的挂件关掉 —— 之前每次都这么做，
+         * 等于每验证一次就打断用户一次。所以调试截图不参与单实例。
+         */
+#if DEBUG
+        var oneShot = e.Args.Contains("--shot");
+#else
+        const bool oneShot = false;
+#endif
+
+        if (!oneShot)
         {
-            Log.Info("已有实例在运行，本次启动退出");
-            Shutdown();
-            return;
+            _single = new Mutex(true, @"Local\WorkPepTalk.SingleInstance", out var created);
+            if (!created)
+            {
+                Log.Info("已有实例在运行，本次启动退出");
+                Shutdown();
+                return;
+            }
         }
 
         /* 未捕获异常一律记日志，绝不让挂件静默消失 */

@@ -255,12 +255,21 @@ body { user-select: none; -webkit-user-select: none; }
 }
 .wd-B .rw:first-child { border-top: none; }
 .wd-B .rw b { font-size: 12.5px; }
-/* B 的进度条压在卡片顶边，做成一条 2px 的「水位线」 */
+/*
+ * B 的进度条贴在卡片顶边，做成一条「水位线」。
+ *
+ * 必须内缩 + 圆角 + 压暗。原来是 left/right:0、top:0、填充直接用 --wd-fill
+ * （深底配色下是 80% 白），通栏压在最顶边，再叠上 1px 的 --wd-edge 描边，
+ * 合起来就是一条 3px 的亮线 —— 关掉桌面图标光看它，像窗口上沿没擦干净的
+ * 白边，而不是「今天过了多少」。内缩 10px 离开边缘、圆角收口、填充降到
+ * 四五成，才读得出这是进度。
+ */
 .wd-B .wd-bar {
-  position: absolute; left: 0; right: 0; top: 0;
-  height: 2px; border-radius: 0;
+  position: absolute; left: 10px; right: 10px; top: 4px;
+  height: 2px; border-radius: 2px;
   margin: 0;
 }
+.wd-B .wd-bar i { opacity: .45; border-radius: 2px; }
 .wd-B .wd-tip { font-size: 11px; padding-top: 6px; }
 
 /* =================================================== 主题 C · 像素小屋 */
