@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>上班鼓励器 · 设计书 v1</title>
+<style>
+:root{
+  --paper:#FBFAF7; --paper2:#F4F1EA; --ink:#1E1C19; --ink2:#4A4640; --ink3:#807A70;
+  --line:#E2DDD2; --accent:#A8442A; --accent-soft:#F6EBE6; --teal:#2F6B5E; --teal-soft:#E8F1EE;
+  --serif:Georgia,"Songti SC","SimSun",serif;
+  --sans:"Microsoft YaHei","PingFang SC",-apple-system,sans-serif;
+  --mono:Consolas,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#E8E4DB;color:var(--ink);font-family:var(--sans);font-size:12.4px;
+  line-height:1.66;-webkit-font-smoothing:antialiased;padding:24px 0}
+.page{width:210mm;min-height:297mm;background:var(--paper);margin:0 auto 20px;
+  padding:15mm 15mm 12mm;position:relative;display:flex;flex-direction:column;
+  box-shadow:0 6px 24px rgba(90,78,60,.14);page-break-after:always}
+.page:last-child{page-break-after:auto}
+.pfoot{margin-top:auto;padding-top:10px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;
+  color:var(--ink3);letter-spacing:.1em}
+
+/* 封面 */
+.cover{justify-content:flex-start;padding:54mm 22mm 16mm}
+.cv-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.34em;color:var(--accent);margin-bottom:26px}
+.cover h1{font-family:var(--serif);font-size:38px;font-weight:600;line-height:1.34;letter-spacing:.01em}
+.cover h1 em{font-style:normal;color:var(--accent)}
+.cv-sub{margin-top:18px;font-size:15px;color:var(--ink2);max-width:30em;line-height:1.9}
+.cv-rule{height:1px;background:var(--line);margin:38px 0 22px}
+.cv-meta{display:grid;grid-template-columns:auto 1fr;gap:7px 24px;font-size:12.5px;color:var(--ink2)}
+.cv-meta dt{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--ink3);padding-top:3px}
+.cv-meta dd{color:var(--ink)}
+.cv-stamp{margin-top:46px;display:inline-flex;align-items:center;gap:10px;
+  border:1.5px solid var(--accent);color:var(--accent);border-radius:4px;padding:6px 14px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;align-self:flex-start}
+
+/* 目录 */
+.toc-h{font-family:var(--serif);font-size:22px;font-weight:600;margin-bottom:4px}
+.toc-sub{font-size:11px;color:var(--ink3);font-family:var(--mono);letter-spacing:.14em;margin-bottom:22px}
+.toc{list-style:none}
+.toc li{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px dotted var(--line);font-size:13px}
+.toc .n{font-family:var(--mono);font-size:10.5px;color:var(--accent);width:22px;flex:none}
+.toc .t{color:var(--ink)}
+.toc .d{flex:1;border-bottom:1px dotted transparent}
+.toc .p{font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
+
+/* 标题层级 */
+h2{font-family:var(--serif);font-size:17px;font-weight:600;margin:0 0 5px;letter-spacing:.02em}
+h2 .idx{font-family:var(--mono);font-size:10px;color:var(--accent);margin-right:9px;vertical-align:2px}
+.lead{color:var(--ink3);font-size:10.8px;margin-bottom:13px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-family:var(--serif);font-size:13.2px;font-weight:600;margin:10px 0 4px}
+p{margin-bottom:7px;color:var(--ink2)}
+p strong{color:var(--ink);font-weight:600}
+ul,ol{margin:0 0 9px;padding-left:1.3em;color:var(--ink2)}
+li{margin-bottom:3px}
+
+/* 表格 */
+table{width:100%;border-collapse:collapse;margin:8px 0 11px;font-size:11px}
+th{background:var(--ink);color:#F4F1EA;font-weight:500;text-align:left;padding:5px 8px;
+  font-size:10.5px;letter-spacing:.08em}
+td{padding:3px 8px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
+tbody tr:nth-child(even){background:#F6F2E9}
+td b{color:var(--ink);font-weight:600}
+td code,p code,li code{font-family:var(--mono);font-size:11px;background:#F0EADF;
+  padding:1px 4px;border-radius:3px;color:#7A3826}
+
+/* 代码 */
+pre{background:#201E1B;color:#DED8CC;font-family:var(--mono);font-size:9.4px;line-height:1.5;
+  padding:9px 12px;border-radius:6px;overflow-x:auto;margin:7px 0 9px}
+pre .c{color:#7D766A}
+pre .k{color:#D98E6A}
+pre .s{color:#9DBE8A}
+pre .n{color:#C9B27A}
+pre .f{color:#8FB3C9}
+
+/* 卡片 */
+.box{background:#fff;border:1px solid var(--line);border-radius:7px;padding:10px 13px;margin:8px 0 11px}
+.box .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--ink3);margin-bottom:6px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ok-box{background:var(--teal-soft);border-left:2px solid var(--teal);padding:8px 11px;
+  border-radius:0 5px 5px 0;margin:8px 0;font-size:11.2px;color:#235047}
+.warn-box{background:var(--accent-soft);border-left:2px solid var(--accent);padding:8px 11px;
+  border-radius:0 5px 5px 0;margin:8px 0;font-size:11.2px;color:#7A3826}
+.ok-box b,.warn-box b{font-weight:600}
+
+.tag{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+  padding:1px 6px;border-radius:3px;background:var(--accent-soft);color:var(--accent);margin-right:4px}
+.tag.p0{background:#B23A2C;color:#fff}
+.tag.p1{background:var(--teal);color:#fff}
+.tag.p2{background:#D9D2C4;color:#5C564C}
+
+@media print{
+  body{background:#fff;padding:0}
+  .page{box-shadow:none;margin:0;width:auto;min-height:0;page-break-after:always;padding:16mm 14mm}
+  @page{size:A4;margin:0}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= 封面 ================= -->
+<section class="page cover">
+  <div class="cv-kicker">PRODUCT DESIGN DOC / v1</div>
+  <h1>上班鼓励器<br><em>把一个上班日，换算成一串往上跳的钱</em></h1>
+  <p class="cv-sub">桌面右下角常驻的轻量挂件。不提醒你还有多久下班，只告诉你今天已经赚到了多少——以及加班的那段时间，一分钱都没有。</p>
+  <div class="cv-rule"></div>
+  <dl class="cv-meta">
+    <dt>代号</dt><dd>Work-Pep-Talk</dd>
+    <dt>形态</dt><dd>Windows 桌面挂件 · 免安装绿色版 exe · 开机自启</dd>
+    <dt>技术栈</dt><dd>Tauri 2.0（Rust 主进程 + WebView2 前端）</dd>
+    <dt>版本</dt><dd>v1.0 设计定稿，对应 UI 稿 v1</dd>
+    <dt>日期</dt><dd>2026 年 11 月 13 日</dd>
+    <dt>仓库</dt><dd>github.com/iotyunhe/Work-Pep-Talk</dd>
+  </dl>
+  <div class="cv-stamp">内 部 设 计 稿</div>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 1 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 目录 ================= -->
+<section class="page">
+  <div class="toc-h">目 录</div>
+  <div class="toc-sub">CONTENTS</div>
+  <ul class="toc">
+    <li><span class="n">01</span><span class="t">项目定位与边界</span><span class="d"></span><span class="p">03</span></li>
+    <li><span class="n">02</span><span class="t">需求清单与优先级</span><span class="d"></span><span class="p">04</span></li>
+    <li><span class="n">03</span><span class="t">计算内核规格</span><span class="d"></span><span class="p">05</span></li>
+    <li><span class="n">04</span><span class="t">状态机与形象映射</span><span class="d"></span><span class="p">06</span></li>
+    <li><span class="n">05</span><span class="t">视觉规范与背景配色算法</span><span class="d"></span><span class="p">07</span></li>
+    <li><span class="n">06</span><span class="t">交互规格</span><span class="d"></span><span class="p">08</span></li>
+    <li><span class="n">07</span><span class="t">技术架构与数据契约</span><span class="d"></span><span class="p">09</span></li>
+    <li><span class="n">08</span><span class="t">文案库</span><span class="d"></span><span class="p">10</span></li>
+    <li><span class="n">09</span><span class="t">验收清单</span><span class="d"></span><span class="p">11</span></li>
+    <li><span class="n">10</span><span class="t">默认假设与里程碑</span><span class="d"></span><span class="p">11</span></li>
+  </ul>
+
+  <h3 style="margin-top:26px">这份文档解决什么</h3>
+  <p>它不解释界面长什么样——那个看 UI 稿。它解决三件事：<strong>数字怎么算</strong>（第 3 节，逐条给公式和边界）、<strong>什么时候变脸</strong>（第 4 节，状态机阈值）、<strong>换背景为什么字还看得清</strong>（第 5 节，配色算法）。</p>
+  <p>凡是需求讨论中已经拍板的，写成规则；凡是没人问过的，我按工程惯例拍板并标注为「默认假设」，不留待确认项。</p>
+
+  <div class="box">
+    <div class="lbl">已拍板的九条决策</div>
+    <table style="margin:0">
+      <thead><tr><th style="width:36%">决策点</th><th>结论</th></tr></thead>
+      <tbody>
+        <tr><td>月薪折日薪</td><td>自填每月工作天数，默认 <b>22 天</b>（不用 21.75 法定口径）</td></tr>
+        <tr><td>午休</td><td>设置项开关，默认不计入工时</td></tr>
+        <tr><td>加班</td><td>金额<b>停止累计、锁定在日薪</b>，只增加加班时长</td></tr>
+        <tr><td>视觉方向</td><td>A 纸质便签为默认，B 仪表 / C 像素作皮肤</td></tr>
+        <tr><td>背景</td><td>七色光 + 白 + 黑共 9 种预设，另支持自定义图片</td></tr>
+        <tr><td>虚拟形象</td><td>内置团子 + 支持自定义图片，两者都要</td></tr>
+        <tr><td>跨天夜班</td><td>支持（如 22:00–次日 06:00）</td></tr>
+        <tr><td>历史累计</td><td>v1 只算当天，不做周/月统计</td></tr>
+        <tr><td>窗口与穿透</td><td>记住拖拽位置、默认右下角；默认不点击穿透</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 2 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 01 定位 ================= -->
+<section class="page">
+  <h2><span class="idx">01</span>项目定位与边界</h2>
+  <p class="lead">先把「要什么」「什么不算」「什么算做完」写死。这三句念给不了解背景的人听，他也能判断做得好不好。</p>
+
+  <h3>1.1 我要什么</h3>
+  <p>一个 300×200 的常驻小窗，贴在屏幕右下角、置顶、可拖动、位置被记住。工资按<strong>月薪 / 日薪 / 时薪</strong>任一种输入，软件自动折算出日薪与时薪并固定显示两行。主数字是<strong>「今天已赚」</strong>，每秒递增。同时显示已工作时长与距下班时长。形象随当天进度变脸。改工资后一秒内全界面重算。</p>
+
+  <h3>1.2 什么不算</h3>
+  <ul>
+    <li><strong>不是番茄钟</strong>——不做任务清单、不做专注计时、不做休息提醒。</li>
+    <li><strong>不是记账软件</strong>——不做月度报表、不做消费分析、不做趋势图。</li>
+    <li><strong>不是打卡工具</strong>——不记录考勤、不生成工时证明、不上传任何数据。</li>
+    <li><strong>不靠弹窗打扰</strong>——不主动弹通知、不强制置顶打断、不发声（v1）。</li>
+    <li><strong>不说空话</strong>——「加油」「打工人」「你真的超棒」一律不写。</li>
+  </ul>
+
+  <h3>1.3 什么算做完</h3>
+  <table>
+    <thead><tr><th style="width:26%">维度</th><th>标准</th></tr></thead>
+    <tbody>
+      <tr><td><b>数值正确</b></td><td>连续运行 8 小时，金额累计误差 ≤ 1 秒对应金额（约 ¥0.01–0.02）</td></tr>
+      <tr><td><b>响应及时</b></td><td>修改工资或工时，全界面 1 秒内完成重算</td></tr>
+      <tr><td><b>状态可靠</b></td><td>跨零点、跨天、休眠唤醒、系统改时间，均能落到正确状态</td></tr>
+      <tr><td><b>资源克制</b></td><td>空闲 CPU &lt; 1%，常驻内存 &lt; 80MB，不触发风扇</td></tr>
+      <tr><td><b>绿色可移</b></td><td>整个文件夹拷到任意目录（含 U 盘）双击即用，配置不丢</td></tr>
+      <tr><td><b>开机即现</b></td><td>登录系统后 3 秒内出现在上次的位置，不需管理员权限</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.4 最关键的一个判断</h3>
+  <div class="ok-box">
+    <b>同类产品都在做倒计时，我们不。</b>倒计时是负反馈——屏幕上永远有一个数字在减少，看久了只会更想跑。真正能支撑人的是增量：数字在涨，说明这段时间换到了东西。<br><br>
+    所以视觉中心必须是「今天已赚」，日薪与时薪降级为核对用的辅助信息，已工作与距下班再降一级。这个层级关系是产品的地基，任何后续改动都不能翻转它。
+  </div>
+
+  <h3>1.5 目标用户与场景</h3>
+  <p>每天坐在电脑前 8 小时以上、工资固定、对「今天又白干了」有体感的人。典型场景：写代码、做设计、写材料、远程办公。打开挂件不是为了被鼓励，是为了把抽象的「上班」变成可数的钱。</p>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 3 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 02 需求 ================= -->
+<section class="page">
+  <h2><span class="idx">02</span>需求清单与优先级</h2>
+  <p class="lead">P0 = 不可用就没意义；P1 = v1 必须有；P2 = 有更好，可延后。</p>
+
+  <table>
+    <thead><tr><th style="width:8%">级别</th><th style="width:26%">功能</th><th>说明与验收口径</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag p0">P0</span></td><td>工资三口径输入</td><td>月薪 / 日薪 / 时薪互转，输入任一即可，另外两个自动算出</td></tr>
+      <tr><td><span class="tag p0">P0</span></td><td>日薪与时薪常显</td><td>固定占一行，不随状态隐藏，方便随时核对</td></tr>
+      <tr><td><span class="tag p0">P0</span></td><td>今天已赚实时递增</td><td>每秒刷新，秒级增量可见</td></tr>
+      <tr><td><span class="tag p0">P0</span></td><td>已工作时长 / 距下班</td><td>HH:MM:SS，双格并列</td></tr>
+      <tr><td><span class="tag p0">P0</span></td><td>窗口置顶 + 无边框 + 可拖动</td><td>压在所有普通窗口之上，位置被记住</td></tr>
+      <tr><td><span class="tag p0">P0</span></td><td>下班后金额锁定</td><td>到点即停，转「已加班 HH:MM:SS」</td></tr>
+      <tr><td><span class="tag p1">P1</span></td><td>九色背景 + 自定义图</td><td>9 种预设自动配色；图片走毛玻璃衬底</td></tr>
+      <tr><td><span class="tag p1">P1</span></td><td>内置团子形象</td><td>六种表情，随状态切换</td></tr>
+      <tr><td><span class="tag p1">P1</span></td><td>自定义形象图片</td><td>PNG / JPG / GIF，建议 256×256，可按时段配多张</td></tr>
+      <tr><td><span class="tag p1">P1</span></td><td>跨天夜班</td><td>支持 endMin &lt; startMin 的班次</td></tr>
+      <tr><td><span class="tag p1">P1</span></td><td>开机自启</td><td>写 HKCU Run 项，免管理员权限</td></tr>
+      <tr><td><span class="tag p1">P1</span></td><td>设置面板</td><td>首次启动强制走一遍，之后右键进入</td></tr>
+      <tr><td><span class="tag p1">P1</span></td><td>收起态圆球</td><td>56×56，双击还原</td></tr>
+      <tr><td><span class="tag p2">P2</span></td><td>三套皮肤切换</td><td>A/B/C 换肤，共用同一 DOM</td></tr>
+      <tr><td><span class="tag p2">P2</span></td><td>点击穿透</td><td>右键菜单临时开启，默认关</td></tr>
+      <tr><td><span class="tag p2">P2</span></td><td>多显示器位置记忆</td><td>记住所在屏幕与坐标</td></tr>
+      <tr><td><span class="tag p2">P2</span></td><td>历史累计</td><td>本周 / 本月已赚，v1 明确不做</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.1 v1 明确不做</h3>
+  <p>历史统计、云同步、账号体系、多语言、声音提醒、任务管理、屏幕使用时长统计、工资条解析。这些都不进 v1，代码结构上也不预留插槽——真要做时再重构，比现在留一堆空接口干净。</p>
+
+  <div class="warn-box">
+    <b>范围纪律：</b>v1 只交付「能跑起来且数值对」的最小闭环。自定义形象、夜班、皮肤切换都是 P1/P2，实现顺序排在 P0 全部通过验收之后，避免中途出现「功能都有了但金额算错」。
+  </div>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 4 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 03 计算内核 ================= -->
+<section class="page">
+  <h2><span class="idx">03</span>计算内核规格</h2>
+  <p class="lead">唯一真相来源是 <code>compute(now)</code>，界面所有数字都从它出，不做二次加工。</p>
+
+  <h3>3.1 输入参数</h3>
+  <table>
+    <thead><tr><th style="width:22%">字段</th><th style="width:14%">类型</th><th style="width:16%">默认值</th><th>取值域与说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>mode</code></td><td>枚举</td><td>monthly</td><td>monthly / daily / hourly，决定 <code>value</code> 的含义</td></tr>
+      <tr><td><code>value</code></td><td>数值</td><td>8000</td><td>&gt; 0；≤ 0 时不计算，显示「请先填工资」</td></tr>
+      <tr><td><code>daysPerMonth</code></td><td>数值</td><td>22</td><td>1–31，允许小数（如 21.75）</td></tr>
+      <tr><td><code>hoursPerDay</code></td><td>数值</td><td>8</td><td>(0, 24]，允许小数</td></tr>
+      <tr><td><code>startMin</code></td><td>分钟</td><td>540</td><td>0–1439，09:00</td></tr>
+      <tr><td><code>endMin</code></td><td>分钟</td><td>1080</td><td>0–1439，18:00；小于 startMin 即视为跨天</td></tr>
+      <tr><td><code>lunchStart</code> / <code>lunchEnd</code></td><td>分钟</td><td>720 / 780</td><td>午休区间 12:00–13:00</td></tr>
+      <tr><td><code>excludeLunch</code></td><td>布尔</td><td>true</td><td>午休是否从工时中扣除</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 折算公式</h3>
+<pre><span class="c">// 三种口径 → 统一的日薪 / 时薪</span>
+<span class="k">const</span> daily  = mode === <span class="s">'monthly'</span> ? value / daysPerMonth
+             : mode === <span class="s">'daily'</span>   ? value
+             : value * hoursPerDay;
+<span class="k">const</span> hourly = daily / hoursPerDay;
+
+<span class="c">// 分段：扣除午休后的有效工作区间（分钟）</span>
+<span class="f">segments</span>() = excludeLunch ? [[startMin,lunchStart],[lunchEnd,endMin]] : [[startMin,endMin]];
+
+<span class="c">// 时长与金额</span>
+totalSec  = Σ (段终点 − 段起点) × <span class="n">60</span>
+workedSec = Σ clamp(now − 段起点, <span class="n">0</span>, 段长) × <span class="n">60</span>
+earned    = hourly / <span class="n">3600</span> × workedSec        <span class="c">// 加班时段不再相加</span>
+otSec     = max(<span class="n">0</span>, now − endMin) × <span class="n">60</span>
+progress  = totalSec &gt; <span class="n">0</span> ? min(<span class="n">1</span>, workedSec / totalSec) : <span class="n">1</span></pre>
+
+  <h3>3.3 边界规则（必须逐条实现）</h3>
+  <table>
+    <thead><tr><th style="width:30%">情况</th><th>处理</th></tr></thead>
+    <tbody>
+      <tr><td>加班（now &gt; endMin）</td><td><b>金额冻结在 daily</b>，不乘倍率；<code>otSec</code> 独立累计，界面第二格改显示「已加班」</td></tr>
+      <tr><td>跨天夜班（endMin &lt; startMin）</td><td>班次拆为 [startMin, 1440] 与 [0, endMin] 两段；若 now &lt; endMin，视为「昨天上的班还没结束」，进度按上一班次计算</td></tr>
+      <tr><td>午休不在班次内</td><td>直接忽略午休设置，不退化为负时长</td></tr>
+      <tr><td>hoursPerDay 与班次时长不一致</td><td>以 <code>hoursPerDay</code> 为准算时薪；班次只用于算「已工作多久」，两者互不覆盖</td></tr>
+      <tr><td>时间改动 / 休眠唤醒</td><td>每 tick 用系统时间重算、不做累加，跳变后自动落到正确状态；唤醒首帧立即重算</td></tr>
+      <tr><td>金额精度</td><td>内部按秒算，展示四舍五入到 2 位，不在中间步骤舍入</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn-box">
+    <b>最容易错的一条：</b>加班时不要把 <code>hourly/3600 × otSec</code> 加进 <code>earned</code>。加了就会显示一个公司根本不会付的数字。锁在日薪是刻意设计，不是实现简化。
+  </div>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 5 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 04 状态机 ================= -->
+<section class="page">
+  <h2><span class="idx">04</span>状态机与形象映射</h2>
+  <p class="lead">状态由「当天进度比例」判定，不用绝对时间——这样夜班和弹性工时不用单独写分支。</p>
+
+  <h3>4.1 判定顺序</h3>
+<pre><span class="k">function</span> <span class="f">moodOf</span>(c) {
+  <span class="k">if</span> (c.phase === <span class="s">'before'</span>)   <span class="k">return</span> <span class="s">'before'</span>;      <span class="c">// now &lt; startMin</span>
+  <span class="k">if</span> (c.phase === <span class="s">'overtime'</span>) <span class="k">return</span> <span class="s">'overtime'</span>;    <span class="c">// now &gt; endMin</span>
+  <span class="k">if</span> (c.progress &gt;= <span class="n">0.999</span>)    <span class="k">return</span> <span class="s">'done'</span>;        <span class="c">// 正好到点</span>
+  <span class="k">if</span> (c.progress &gt;= <span class="n">0.80</span>)     <span class="k">return</span> <span class="s">'late'</span>;        <span class="c">// 后 20%</span>
+  <span class="k">if</span> (c.progress &lt;= <span class="n">0.12</span>)     <span class="k">return</span> <span class="s">'early'</span>;       <span class="c">// 前 12%</span>
+  <span class="k">return</span> <span class="s">'mid'</span>;
+}</pre>
+
+  <h3>4.2 六种状态对照</h3>
+  <table>
+    <thead><tr><th style="width:14%">状态</th><th style="width:14%">图标色</th><th style="width:20%">形象表情</th><th>界面文案（元气基调）</th></tr></thead>
+    <tbody>
+      <tr><td><b>未开工</b></td><td>灰</td><td>困、眼睛眯成线</td><td>还没开工。先把水倒上。</td></tr>
+      <tr><td><b>刚开工</b></td><td>绿</td><td>睁眼、微笑</td><td>开工啦。今天第一块钱已经到账。</td></tr>
+      <tr><td><b>进行中</b></td><td>绿</td><td>弯眼笑</td><td>已经赚了一顿午饭。</td></tr>
+      <tr><td><b>临近下班</b></td><td>橙</td><td>眯眼、带困意</td><td>最后一段啦。剩下的时间在打折。</td></tr>
+      <tr><td><b>加班中</b></td><td>橙</td><td>死鱼眼、冒汗</td><td>加班 1 小时 6 分，这段时间没有钱。</td></tr>
+      <tr><td><b>已收工</b></td><td>灰</td><td>张嘴大笑、星星</td><td>今天到此为止。钱已经落袋。</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.3 状态切换的三条硬规则</h3>
+  <ol>
+    <li><strong>到点即锁。</strong>进度到 100% 的那一秒，金额停止增长并把标签换成「已锁定」，不等下一分钟。</li>
+    <li><strong>文案只陈述事实。</strong>不说「再坚持一下」，只说「还剩 47 分钟，等于 36 块」。可被验证的数字比形容词有力。</li>
+    <li><strong>加班文案允许尖锐。</strong>日常元气，加班转吐槽——用户明确要求的语气分档，见第 8 节文案库。</li>
+  </ol>
+
+  <h3>4.4 形象切换</h3>
+  <p>内置团子用内联 SVG 绘制，六种表情是六组眼睛与嘴的形状，共用一个身体轮廓。自定义图片时按状态映射到用户上传的图：<strong>上传 1 张</strong>则全程用它；<strong>上传多张</strong>则按「上班 / 加班 / 收工」三档轮换，用户可在设置里指定哪张对应哪档。图片统一缩放到 56×56 显示区，保持比例居中，超出裁切。</p>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 6 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 05 视觉规范 ================= -->
+<section class="page">
+  <h2><span class="idx">05</span>视觉规范与背景配色算法</h2>
+  <p class="lead">背景可换是这个产品最容易做崩的地方——底色一变，所有文字都可能看不见。解法不是准备九套配色，是让配色由亮度算出来。</p>
+
+  <h3>5.1 尺寸与层级</h3>
+  <table>
+    <thead><tr><th style="width:26%">元素</th><th style="width:22%">尺寸</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>主面板</td><td>300 × 200（自适应高度）</td><td>圆角 16，内边距 12 / 14</td></tr>
+      <tr><td>收起态</td><td>56 × 56 圆球</td><td>右下角徽标显示整数金额</td></tr>
+      <tr><td>形象区</td><td>56 × 56，圆角 14</td><td>像素皮肤为 52×52 硬描边</td></tr>
+      <tr><td>主数字</td><td>28px 衬线 / 25px 等宽</td><td>tabular-nums，等宽数字防跳动</td></tr>
+      <tr><td>辅助行</td><td>10.5px 等宽</td><td>日薪 · 时薪</td></tr>
+      <tr><td>双格</td><td>各占一半，圆角 8</td><td>已工作 / 距下班</td></tr>
+      <tr><td>进度条</td><td>4px 高（像素皮肤 8px）</td><td>只给颜色不给百分比，避免盯着数字焦虑</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.2 背景配色：亮度驱动</h3>
+<pre><span class="c">// WCAG 相对亮度，输入 #RRGGBB</span>
+<span class="k">function</span> <span class="f">lum</span>(hex) {
+  <span class="k">const</span> f = v =&gt; { v /= <span class="n">255</span>; <span class="k">return</span> v &lt;= <span class="n">0.03928</span> ? v/<span class="n">12.92</span> : ((v+<span class="n">0.055</span>)/<span class="n">1.055</span>)**<span class="n">2.4</span>; };
+  <span class="k">return</span> <span class="n">0.2126</span>*f(R) + <span class="n">0.7152</span>*f(G) + <span class="n">0.0722</span>*f(B);
+}
+<span class="k">const</span> dark = <span class="f">lum</span>(bg) &lt; <span class="n">0.42</span>;   <span class="c">// 0.42 是分界线，实测最稳</span></pre>
+
+  <table>
+    <thead><tr><th style="width:18%">Token</th><th style="width:41%">浅底（L ≥ 0.42）</th><th>深底（L &lt; 0.42）</th></tr></thead>
+    <tbody>
+      <tr><td>主字</td><td>#1E1C19</td><td>#F7F3E9</td></tr>
+      <tr><td>次字</td><td>rgba(30,28,25,.74)</td><td>rgba(247,243,233,.76)</td></tr>
+      <tr><td>弱字</td><td>rgba(30,28,25,.46)</td><td>rgba(247,243,233,.54)</td></tr>
+      <tr><td>小方块底</td><td>rgba(30,28,25,.045)</td><td>rgba(255,255,255,.10)</td></tr>
+      <tr><td>轨道</td><td>rgba(30,28,25,.09)</td><td>rgba(255,255,255,.17)</td></tr>
+      <tr><td>进度填充</td><td>#A8442A（黄底改 #2F6B5E）</td><td>rgba(255,255,255,.80)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.3 为什么黄底要单独处理</h3>
+  <p>黄（#E3B93F）亮度 0.51，属于浅底，字自动转深色——但红色进度条压在黄底上对比度只有 1.8:1，看上去像没画。所以规则里加一条特例：<strong>极亮且高饱和的底色，进度条改用青绿 #2F6B5E</strong>。这是实测后补的补丁，不是拍脑袋。</p>
+
+  <h3>5.4 自定义背景图</h3>
+  <p>图片再花也不能吃掉数字，做法是垫一层 <strong>74% 半透明米白 + 18px 高斯模糊 + 轻微提饱和</strong>。这样无论用户放的是风景、照片还是纯色块，卡面总是回到「有质感的纸」，数字对比度稳定在可读区间。</p>
+  <div class="ok-box">
+    <b>不做的事：</b>不自动提取图片主题色去生成配色。早期试过，遇到高饱和图片会算出刺眼组合，且同一张图在不同区域取色结果不稳定。固定衬底是更笨但更可靠的做法。
+  </div>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 7 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 06 交互 ================= -->
+<section class="page">
+  <h2><span class="idx">06</span>交互规格</h2>
+  <p class="lead">挂件一天在屏幕上待八小时，任何多余的动效都是干扰。所有交互都要能「不碰它也不出事」。</p>
+
+  <h3>6.1 鼠标行为</h3>
+  <table>
+    <thead><tr><th style="width:24%">操作</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td>悬停</td><td>右上角浮出设置 / 收起 / 关闭三个图标，移开即隐。平时完全干净</td></tr>
+      <tr><td>按住拖动</td><td>移动窗口；松开时把坐标写进配置，下次开机回到原位</td></tr>
+      <tr><td>双击头部</td><td>在「完整面板」与「56px 圆球」之间切换</td></tr>
+      <tr><td>右键</td><td>弹菜单：设置 / 重置今日 / 临时穿透 / 隐藏 / 退出</td></tr>
+      <tr><td>点击金额</td><td>短暂显示「日薪 ÷ 每日工时 = 时薪」的换算过程，两秒后消失</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.2 特殊状态处理</h3>
+  <table>
+    <thead><tr><th style="width:26%">场景</th><th>行为</th></tr></thead>
+    <tbody>
+      <tr><td>首次启动</td><td>强制弹出设置面板，工资未填前主数字显示「请先填工资」，不显示 0.00</td></tr>
+      <tr><td>点击穿透开启</td><td>窗口变为鼠标透明，所有点击落到下层；只能从托盘菜单关闭穿透</td></tr>
+      <tr><td>多显示器</td><td>按屏幕标识记忆坐标；若上次的屏幕已断开，回落到主屏右下角</td></tr>
+      <tr><td>分辨率变化</td><td>记忆坐标越界时夹回可视区域内，不跑到屏幕外</td></tr>
+      <tr><td>退出</td><td>写盘后再退出；托盘菜单「退出」才真正关闭，关闭按钮默认只隐藏到托盘</td></tr>
+      <tr><td>重复启动</td><td>单实例锁；第二次启动时激活已有窗口，不开新进程</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.3 刷新策略</h3>
+  <p>每秒重算一次并只更新变化了的文本节点，不重建整棵 DOM。进度条宽度的过渡设为 0.5 秒线性，让跳动柔和一些。窗口不可见（被收起或被遮挡）时降为每 5 秒一次，恢复可见立即重算——这是把空闲 CPU 压到 1% 以下的关键。</p>
+
+  <h3>6.4 键盘与无障碍</h3>
+  <p>挂件常驻但不抢焦点，不出现在 Alt+Tab 列表里。托盘菜单提供「切换到前台」以便纯键盘操作。所有图标按钮带 tooltip，主数字的对比度不低于 4.5:1。</p>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 8 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 07 架构 ================= -->
+<section class="page">
+  <h2><span class="idx">07</span>技术架构与数据契约</h2>
+  <p class="lead">Tauri 2.0：Rust 负责窗口、托盘、自启、读写配置；前端只负责画界面和算数。两者通过少量命令通信。</p>
+
+  <h3>7.1 进程与职责</h3>
+  <table>
+    <thead><tr><th style="width:22%">层</th><th style="width:24%">技术</th><th>职责</th></tr></thead>
+    <tbody>
+      <tr><td>外壳</td><td>Rust + Tauri 2.0</td><td>无边框透明窗口、置顶、托盘、单实例、开机自启、配置文件读写</td></tr>
+      <tr><td>渲染</td><td>WebView2 + 原生 HTML/CSS/JS</td><td>界面绘制、<code>compute()</code> 计算、每秒刷新</td></tr>
+      <tr><td>配置</td><td>exe 同级 <code>config.json</code></td><td>全部设置与窗口坐标；不写注册表、不写 AppData</td></tr>
+      <tr><td>形象</td><td>内联 SVG / 本地图片文件</td><td>自定义图存在 <code>assets/</code> 子目录</td></tr>
+    </tbody>
+  </table>
+
+  <h3>7.2 配置契约</h3>
+<pre>{
+  <span class="s">"version"</span>: 1,
+  <span class="s">"pay"</span>: { <span class="s">"mode"</span>: <span class="s">"monthly"</span>, <span class="s">"value"</span>: <span class="n">8000</span>,
+           <span class="s">"daysPerMonth"</span>: <span class="n">22</span>, <span class="s">"hoursPerDay"</span>: <span class="n">8</span> },
+  <span class="s">"schedule"</span>: { <span class="s">"start"</span>: <span class="s">"09:00"</span>, <span class="s">"end"</span>: <span class="s">"18:00"</span>,
+                <span class="s">"lunchStart"</span>: <span class="s">"12:00"</span>, <span class="s">"lunchEnd"</span>: <span class="s">"13:00"</span>,
+                <span class="s">"excludeLunch"</span>: <span class="k">true</span> },
+  <span class="s">"look"</span>: { <span class="s">"theme"</span>: <span class="s">"paper"</span>, <span class="s">"background"</span>: <span class="s">"white"</span>,
+            <span class="s">"bgImage"</span>: <span class="k">null</span>, <span class="s">"avatar"</span>: <span class="s">"builtin"</span>,
+            <span class="s">"avatarFiles"</span>: [] },
+  <span class="s">"window"</span>: { <span class="s">"x"</span>: <span class="n">1620</span>, <span class="s">"y"</span>: <span class="n">820</span>, <span class="s">"screen"</span>: <span class="s">"DISPLAY1"</span>,
+              <span class="s">"collapsed"</span>: <span class="k">false</span> },
+  <span class="s">"behaviour"</span>: { <span class="s">"alwaysOnTop"</span>: <span class="k">true</span>, <span class="s">"clickThrough"</span>: <span class="k">false</span>,
+                 <span class="s">"autoStart"</span>: <span class="k">true</span> }
+}</pre>
+
+  <p>读取失败或版本不认识时，<strong>先备份成 <code>config.bak.json</code>，再用默认值重建</strong>，绝不因为一个坏文件让应用起不来。写入用「临时文件 + 原子替换」，避免断电写坏。</p>
+
+  <h3>7.3 关键实现要点</h3>
+  <ul>
+    <li>透明窗口需同时设置 <code>transparent: true</code> 与 <code>decorations: false</code>，Windows 下还要关闭窗口阴影，否则圆角外框会出现黑边。</li>
+    <li>置顶用 <code>set_always_on_top(true)</code>；全屏应用覆盖时由系统接管，不做额外干预。</li>
+    <li>开机自启由 <code>tauri-plugin-autostart</code> 写 <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</code>，卸载时删除该键。</li>
+    <li>单实例由官方插件实现，第二次启动把已有窗口提到前台。</li>
+    <li>打包 <code>.exe</code> 目标选择可执行文件而非安装包，产物连同 <code>config.json</code>、<code>assets/</code> 放同一目录即为绿色版。</li>
+  </ul>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 9 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 08 文案 ================= -->
+<section class="page">
+  <h2><span class="idx">08</span>文案库</h2>
+  <p class="lead">两套语气：日常元气，加班尖锐。切换点不是时间，是「这一刻有没有在赚钱」。</p>
+
+  <h3>8.1 日常（未开工 / 刚开工 / 进行中 / 临近下班 / 收工）</h3>
+  <table>
+    <thead><tr><th style="width:22%">时机</th><th>文案示例</th></tr></thead>
+    <tbody>
+      <tr><td>未开工</td><td>还没开工。先把水倒上。<br>还有 8 分钟，够泡杯茶。</td></tr>
+      <tr><td>刚开工</td><td>开工啦。今天第一块钱已经到账。<br>这一秒开始，时间就在变成钱。</td></tr>
+      <tr><td>进行中</td><td>已经赚了一顿午饭。<br>折算下来，这一小时值 45 块 4。<br>再来两小时，今天的房租就有着落了。</td></tr>
+      <tr><td>临近下班</td><td>最后一段啦。剩下的时间在打折。<br>还剩 47 分钟，等于 36 块。</td></tr>
+      <tr><td>已收工</td><td>今天到此为止。钱已经落袋。<br>363 块 6，够干点别的了。</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.2 加班（尖锐，但不人身攻击）</h3>
+  <table>
+    <thead><tr><th style="width:22%">时长</th><th>文案示例</th></tr></thead>
+    <tbody>
+      <tr><td>0–30 分钟</td><td>到点了。这段开始不算钱。<br>再坐十分钟，就白送十分钟。</td></tr>
+      <tr><td>30–60 分钟</td><td>已经白干半小时。老板不会知道，但你知道了。<br>这半小时，时薪归零。</td></tr>
+      <tr><td>1 小时以上</td><td>无偿加班 1 小时 6 分。今天时薪被拉低到 40 块 3。<br>再坐下去，你今天的平均时薪还在往下掉。</td></tr>
+      <tr><td>2 小时以上</td><td>加班 2 小时 12 分。这已经是一顿正经晚饭的时间。<br>今天的时薪被打到 36 块 1，还在跌。</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn-box">
+    <b>文案纪律：</b>尖锐指向「这件事没有报酬」，不指向「你很失败」。可以吐槽老板不给钱，不能说用户没用。所有文案必须带一个具体数字——没有数字的句子就是在喊口号。
+  </div>
+
+  <h3>8.3 动态文案的组装规则</h3>
+  <p>文案由「模板 + 实时数值」拼成，例如 <code>加班 {otDur}，这段时间没有钱。</code>。模板按状态分组，同一状态内每次刷新不换句——只在状态切换的瞬间更换，避免每秒闪字。</p>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 10 页 / 共 11 页</span></div>
+</section>
+
+<!-- ================= 09-10 验收与里程碑 ================= -->
+<section class="page">
+  <h2><span class="idx">09</span>验收清单</h2>
+  <p class="lead">逐条可执行、可判定。全部通过才算 v1 完成。</p>
+
+  <table>
+    <thead><tr><th style="width:6%">#</th><th style="width:34%">检查项</th><th>判定方法</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>月薪 8000 / 22 天 / 8 小时</td><td>日薪显示 363.64，时薪显示 45.45</td></tr>
+      <tr><td>2</td><td>切换到「时薪 45.45」输入</td><td>日薪反算回 363.60（误差 ≤ 0.05）</td></tr>
+      <tr><td>3</td><td>14:12:32 时刻（午休不计）</td><td>已工作 04:12:32，已赚 191.33</td></tr>
+      <tr><td>4</td><td>18:00:00 整点</td><td>金额锁定 363.64，距下班 00:00:00，状态转「已收工」</td></tr>
+      <tr><td>5</td><td>19:06:44</td><td>金额仍为 363.64（不再增长），第二格显示「已加班 01:06:44」</td></tr>
+      <tr><td>6</td><td>改月薪为 12000</td><td>1 秒内日薪 545.45、时薪 68.18，已赚同步跳变</td></tr>
+      <tr><td>7</td><td>连跑 8 小时</td><td>与按秒累加的独立计算脚本比对，误差 ≤ 0.02 元</td></tr>
+      <tr><td>8</td><td>九个背景逐个切换</td><td>主数字对背景对比度 ≥ 4.5:1，黄底进度条为青绿</td></tr>
+      <tr><td>9</td><td>上传一张深色照片背景</td><td>卡面出现毛玻璃衬底，数字清晰，不出现黑边</td></tr>
+      <tr><td>10</td><td>拖动到副屏后重启</td><td>回到副屏同一坐标；断开副屏后回落主屏右下角</td></tr>
+      <tr><td>11</td><td>开机自启</td><td>登录后 3 秒内出现，任务管理器无额外 UAC 提示</td></tr>
+      <tr><td>12</td><td>资源占用</td><td>空闲 CPU &lt; 1%，内存 &lt; 80MB</td></tr>
+      <tr><td>13</td><td>夜班 22:00–06:00</td><td>23:00 显示进度正常；次日 02:00 仍属同一班次</td></tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:26px"><span class="idx">10</span>默认假设与里程碑</h2>
+  <p class="lead">这些没在问答里逐条确认，按工程惯例拍板，写在这里备查。</p>
+  <table>
+    <thead><tr><th style="width:30%">假设</th><th>取值与理由</th></tr></thead>
+    <tbody>
+      <tr><td>状态阈值</td><td>前 12% 为刚开工，后 20% 为临近下班。取整百分比，便于不同工时复用</td></tr>
+      <tr><td>自定义形象规格</td><td>PNG / JPG / GIF，建议 256×256，单张 ≤ 5MB，最多 3 张按时段映射</td></tr>
+      <tr><td>午休默认</td><td>不计入工时（多数公司实际计薪口径）</td></tr>
+      <tr><td>每月工作日默认</td><td>22 天（双休常见口径），可改</td></tr>
+      <tr><td>关闭按钮语义</td><td>默认隐藏到托盘；托盘「退出」才真正关闭</td></tr>
+      <tr><td>错误处理</td><td>工资 ≤ 0 不计算并提示；配置文件损坏则备份重建</td></tr>
+      <tr><td>刷新降频</td><td>不可见时 5 秒一次，恢复可见立即重算</td></tr>
+    </tbody>
+  </table>
+
+  <h3>里程碑</h3>
+  <table>
+    <thead><tr><th style="width:12%">阶段</th><th style="width:30%">交付</th><th>完成标志</th></tr></thead>
+    <tbody>
+      <tr><td>M1</td><td>计算内核 + 静态界面</td><td>验收 1–5 全过</td></tr>
+      <tr><td>M2</td><td>Tauri 外壳 + 置顶 + 拖动 + 配置</td><td>验收 9–11 全过</td></tr>
+      <tr><td>M3</td><td>状态机 + 形象 + 背景</td><td>验收 6–8 全过</td></tr>
+      <tr><td>M4</td><td>自启 + 托盘 + 打包绿色版</td><td>验收 12 全过</td></tr>
+      <tr><td>M5</td><td>夜班 + 自定义形象</td><td>验收 13 全过</td></tr>
+    </tbody>
+  </table>
+  <div class="pfoot"><span>WORK-PEP-TALK / DESIGN DOC</span><span>第 11 页 / 共 11 页</span></div>
+</section>
+
+</body>
+</html>
