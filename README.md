@@ -111,6 +111,26 @@ powershell scripts/make-icon.ps1
 
 ---
 
+## 仓库与推送
+
+仓库：<https://github.com/iotyunhe/Work-Pep-Talk>
+
+**必须走 SSH 推送。** 仓库属 `iotyunhe`，而 Windows 凭据管理器里存的 HTTPS 账号是 `luwinher`，用 HTTPS 推会直接 403：
+
+```
+remote: Permission to iotyunhe/Work-Pep-Talk.git denied to luwinher.
+fatal: ... The requested URL returned error: 403
+```
+
+`~/.ssh/config` 已把 `github.com` 指向 `~/.ssh/id_ed25519_iot`，这把密钥对应的正是 `iotyunhe` 账号，所以走 SSH 无需再做任何授权。
+
+```bash
+git remote set-url origin git@github.com:iotyunhe/Work-Pep-Talk.git
+git push
+```
+
+---
+
 ## 发给别人之前，需要知道的四件事
 
 1. **目标机要求**：Windows 10 1809+ / Windows 11，64 位。界面跑在 WebView2 里，需要 WebView2 运行时 —— Win11 和国内绝大多数 Win10 都随 Edge 自带。真缺了程序会弹窗说明并给出微软官方下载页，不会静默白屏。
