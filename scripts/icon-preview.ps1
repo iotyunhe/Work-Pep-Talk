@@ -1,4 +1,4 @@
-Add-Type -AssemblyName System.Drawing
+﻿Add-Type -AssemblyName System.Drawing
 $root = 'C:\Users\98201\WorkBuddy\spaces\2026_11_13_09-49-11'
 $icoPath = Join-Path $root 'assets\app.ico'
 

@@ -1,4 +1,4 @@
-# Build the app icon (assets/app.ico) without any external tooling.
+﻿# Build the app icon (assets/app.ico) without any external tooling.
 #
 #   powershell -ExecutionPolicy Bypass -File scripts/make-icon.ps1
 #

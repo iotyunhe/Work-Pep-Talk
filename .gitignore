@@ -31,3 +31,5 @@ publish/
 # 调试与校对用的临时截图
 _*.png
 _*.html
+assets/*-check.png
+shot-*.png

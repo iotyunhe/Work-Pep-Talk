@@ -4,8 +4,11 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <!-- 托盘图标用 WinForms 的 NotifyIcon，比手搓 Shell_NotifyIcon 稳 -->
-    <UseWindowsForms>true</UseWindowsForms>
+    <!--
+      刻意不引 WinForms。托盘改用 Interop/Shell.cs 里手写的 Shell_NotifyIcon +
+      原生菜单：为了 WinForms 的 NotifyIcon 要背上 18MB 的 WinForms 栈，
+      自包含单文件压缩后仍占 6.5MB（占整个 exe 一成），而实际只用到「放个图标」。
+    -->
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>WorkPepTalk</AssemblyName>
@@ -20,31 +23,15 @@
     <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
     <!-- 绿色版：不生成 pdb 附带文件，单文件发布见 publish.ps1 -->
     <DebugType Condition="'$(Configuration)'=='Release'">none</DebugType>
-    <!--
-      WFAC010：WinForms 分析器要求把 DPI 设置从 manifest 挪到 Application.SetHighDpiMode。
-      但本应用是 WPF，WPF 只能靠 manifest 声明 PerMonitorV2；
-      WinForms 在这里只用于托盘 NotifyIcon，不涉及布局。故抑制。
-    -->
-    <NoWarn>$(NoWarn);WFAC010</NoWarn>
   </PropertyGroup>
-
-  <!--
-    同时引用 WPF 与 WinForms 时，SDK 会把 System.Windows.Forms / System.Drawing
-    塞进隐式 using，导致 Application、MessageBox、Brush 全部二义。
-    这里直接摘掉，用到的地方在文件里显式 using 或写全名。
-  -->
-  <ItemGroup>
-    <Using Remove="System.Windows.Forms" />
-    <Using Remove="System.Drawing" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
   </ItemGroup>
 
   <!--
-    图标同时要以 WPF 资源形式打进程序集：托盘 NotifyIcon 和窗口图标
-    运行时要拿到它，不能再去磁盘上找文件。
+    图标同时要以 WPF 资源形式打进程序集：托盘和窗口图标运行时要拿到它，
+    不能再去磁盘上找文件。
   -->
   <ItemGroup>
     <Resource Include="..\..\assets\app.ico" Link="Assets\app.ico" />
@@ -60,5 +47,39 @@
       <LogicalName>web/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
+
+  <!--
+    发布期剔重。自包含发布会把一批「只在调试期、设计器、或某个我们用不到的宿主
+    里才加载」的程序集一起塞进 exe，对一个绿色小挂件纯属白扛。
+
+      System.Windows.Forms 及其家属   18MB   已改手写 Shell_NotifyIcon，运行时零引用
+        （注意：Microsoft.Web.WebView2 包里带了 WinForms 宿主程序集，
+          它会把整个 WinForms 栈反向拖进发布清单，所以连它一起剔）
+      System.Drawing.Common / Design  1.5MB  Bitmap/Graphics，图标改走 .ico + HICON 后不用了
+      System.Windows.Forms.Design     5.3MB  WinForms 设计器
+      System.Windows.Controls.Ribbon  1.4MB  WPF Ribbon 控件，界面在 WebView2 里
+      ReachFramework.dll              1.5MB  XPS 打印/文档栈，挂件不打印
+      Microsoft.DiaSymReader.Native   2.1MB  读 PDB 符号，Release 不出 pdb
+      mscordaccore / mscordbi         2.5MB  调试器与内存转储分析接口
+
+    System.Drawing.Primitives 必须留着：WebView2 的 DefaultBackgroundColor
+    要 System.Drawing.Color，它就在这个 100KB 的小程序集里。
+
+    再往下就不砍了：System.Private.Xml(7.6MB) 是 XAML 解析的根依赖，删了起不来；
+    其余 BCL 大件被 WebView2 或 JSON 序列化间接引用，属于猜测性删除，
+    踩中要等用户某次点操作才炸，风险换不来几百 KB。
+  -->
+  <Target Name="TrimPublishPayload" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)',
+                        '^(System\.Windows\.Forms(\.(Primitives|Design))?|Microsoft\.VisualBasic\.Forms|WindowsFormsIntegration|Accessibility|Microsoft\.Web\.WebView2\.WinForms)$'))
+                  or '%(Filename)%(Extension)' == 'System.Windows.Controls.Ribbon.dll'
+                  or '%(Filename)%(Extension)' == 'ReachFramework.dll'
+                  or '%(Filename)%(Extension)' == 'Microsoft.DiaSymReader.Native.amd64.dll'
+                  or $([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)', '^mscordaccore'))
+                  or '%(Filename)' == 'mscordbi'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

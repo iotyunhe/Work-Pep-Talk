@@ -3,12 +3,12 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Web.WebView2.Core;
 using WorkPepTalk.Interop;
 using WorkPepTalk.Models;
 using WorkPepTalk.Services;
-using Forms = System.Windows.Forms;
 
 namespace WorkPepTalk;
 
@@ -25,7 +25,7 @@ public partial class MainWindow : Window
 {
     private readonly ConfigStore _store;
     private Tray? _tray;
-    private System.Drawing.Icon? _icon;
+    private IntPtr _hIcon = IntPtr.Zero;
 
     private bool _webReady;
     private string _lastSize = "";
@@ -73,8 +73,11 @@ public partial class MainWindow : Window
     {
         try
         {
-            Icon = new System.Windows.Media.Imaging.BitmapImage(
-                new Uri("pack://application:,,,/Assets/app.ico", UriKind.Absolute));
+            if (IconFactory.IcoData is not { Length: > 0 } bytes) return;
+
+            /* BitmapFrame 能直接解整份 .ico，取到的就是最大那档 */
+            using var ms = new MemoryStream(bytes);
+            Icon = BitmapFrame.Create(ms, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
         }
         catch (Exception ex)
         {
@@ -88,7 +91,9 @@ public partial class MainWindow : Window
     {
         PlaceWindow();
 
-        _icon = IconFactory.Create(32);
+        /* 32px 那一档：通知区在高 DPI 下会按缩放比取更大尺寸，
+           给 16px 上去在 150% 屏上就是糊的 */
+        _hIcon = IconFactory.CreateHIcon(32);
         CreateTray();
 
         ApplyTopmost(_store.Current.Behaviour.AlwaysOnTop);
@@ -99,7 +104,7 @@ public partial class MainWindow : Window
 
     private void CreateTray()
     {
-        _tray = new Tray(_icon!);
+        _tray = new Tray(this, _hIcon);
         _tray.ToggleRequested += () => ToggleCollapse();
         _tray.SettingsRequested += () => SendToWeb("setView", new { view = "panel" });
         _tray.ResetPositionRequested += () => { SnapToCorner(); PersistWindowState(); };
@@ -573,7 +578,9 @@ public partial class MainWindow : Window
 
     private void SnapToCorner()
     {
-        var wa = Forms.Screen.PrimaryScreen!.WorkingArea;
+        /* 主屏用「包含坐标原点的那块屏」来定位：多屏时主屏一定覆盖 (0,0)，
+           这正是 WinForms 里 PrimaryScreen 的语义 */
+        var wa = Shell.MonitorOfPoint(new Shell.POINT { X = 0, Y = 0 }).rcWork;
         var s = DpiScale;
         const double margin = 20;
 
@@ -584,28 +591,30 @@ public partial class MainWindow : Window
     private bool IsVisibleOnAnyScreen()
     {
         var s = DpiScale;
-        var r = new System.Drawing.Rectangle(
-            (int)(Left * s), (int)(Top * s),
-            (int)(Width * s), (int)(Height * s));
+        var left = (int)(Left * s);
+        var top = (int)(Top * s);
+        var right = left + (int)(Width * s);
+        var bottom = top + (int)(Height * s);
 
-        // 至少要有一块 40x40 露在某个屏幕里，否则用户点不到
-        foreach (var sc in Forms.Screen.AllScreens)
+        // 至少要有一块 40x40 露在某个显示器的工作区里，否则用户点不到
+        foreach (var wa in Shell.AllWorkAreas())
         {
-            var inter = System.Drawing.Rectangle.Intersect(sc.WorkingArea, r);
-            if (inter.Width >= 40 && inter.Height >= 40) return true;
+            var w = Math.Min(right, wa.Right) - Math.Max(left, wa.Left);
+            var h = Math.Min(bottom, wa.Bottom) - Math.Max(top, wa.Top);
+            if (w >= 40 && h >= 40) return true;
         }
         return false;
     }
 
-    /// <summary>当前窗口所在屏幕的工作区，换算成 DIP。</summary>
+    /// <summary>当前窗口所在显示器的工作区，换算成 DIP。</summary>
     private Rect WorkAreaDip()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
-        var scr = hwnd != IntPtr.Zero
-            ? Forms.Screen.FromHandle(hwnd)
-            : Forms.Screen.PrimaryScreen!;
 
-        var wa = scr.WorkingArea;
+        var wa = hwnd != IntPtr.Zero
+            ? Shell.MonitorOfWindow(hwnd).rcWork
+            : Shell.MonitorOfPoint(new Shell.POINT { X = 0, Y = 0 }).rcWork;
+
         var s = DpiScale;
         return new Rect(wa.Left / s, wa.Top / s, wa.Width / s, wa.Height / s);
     }
@@ -662,9 +671,7 @@ public partial class MainWindow : Window
     private void ShowContextMenu()
     {
         // 右键窗口等同右键托盘：复用同一份菜单，不两份逻辑
-        var menu = _tray?.Menu;
-        if (menu is null) return;
-        menu.Show(Forms.Cursor.Position);
+        _tray?.ShowMenuAtCursor();
     }
 
     /* ---------------------------------------------------------- 落盘 */
@@ -688,16 +695,18 @@ public partial class MainWindow : Window
         /*
          * 坐标一律按 DIP 存 —— 因为 WPF 的 Left/Top 就是 DIP，读写同一套单位
          * 才不会在 150% 缩放的机器上把窗口存到屏幕外去。
-         * 只有查屏幕名时才换算成物理像素（Screen 用的是物理坐标）。
+         * 只有查屏幕名时才换算成物理像素（显示器 API 用的是物理坐标）。
          */
-        var centerPx = new System.Drawing.Point(
-            (int)(Left * s + Width * s / 2),
-            (int)(Top * s + Height * s / 2));
+        var centerPx = new Shell.POINT
+        {
+            X = (int)(Left * s + Width * s / 2),
+            Y = (int)(Top * s + Height * s / 2)
+        };
 
         _store.SaveWindow(
             (int)Math.Round(Left),
             (int)Math.Round(Top),
-            Forms.Screen.FromPoint(centerPx).DeviceName,
+            Shell.MonitorOfPoint(centerPx).szDevice,
             _store.Current.Window.Collapsed);
     }
 
@@ -713,8 +722,8 @@ public partial class MainWindow : Window
     {
         _saveTimer.Stop();
         PersistWindowState();
-        _tray?.Dispose();
-        _icon?.Dispose();
+        _tray?.Dispose();       // 顺带销毁 HICON
+        _hIcon = IntPtr.Zero;
     }
 
 #if DEBUG

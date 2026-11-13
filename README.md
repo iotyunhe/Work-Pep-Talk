@@ -8,7 +8,7 @@
 
 ## 技术栈
 
-**.NET 8 + WPF + WebView2**，界面用 HTML/CSS/JS 写在 `wwwroot/` 里。
+**.NET 8 + WPF + WebView2**，界面用 HTML/CSS/JS 写在 `wwwroot/` 里。托盘、显示器、光标三块是手写的 Win32（`Interop/Shell.cs`），刻意不引 WinForms —— 原因见下面的「体积」一节。
 
 设计书最初定的是 Tauri 2.0，实际落地时改了。原因只有一条：
 
@@ -16,7 +16,39 @@
 
 而 .NET 8 SDK、WPF 模板、WebView2 运行时三样本机都已就位。换成 WPF 之后，设计书里最有价值的部分 —— 计算内核规格、状态机、配色算法、HTML 界面稿 —— 全部原样复用，只是外壳从 Rust 换成了 C#。
 
-产物差别：Tauri 约 5–10 MB 单文件；本方案 **自包含发布约 64 MB 单文件**（免安装、不依赖目标机环境），框架依赖发布约 2 MB 单文件（需目标机有 .NET 8 桌面运行时）。两种产物都是一整个 exe —— 界面已经嵌在程序集里，不需要旁边的 wwwroot 目录。
+产物差别：Tauri 约 5–10 MB 单文件；本方案 **自包含发布约 55 MB 单文件**（免安装、不依赖目标机环境），框架依赖发布约 1.8 MB 单文件（需目标机有 .NET 8 桌面运行时）。两种产物都是一整个 exe —— 界面已经嵌在程序集里，不需要旁边的 wwwroot 目录。
+
+---
+
+## 体积：55MB 是怎么来的，还能不能再砍
+
+自包含发布 = 把整个 .NET 8 运行时 + WPF 都塞进一个 exe。未压缩时是 149MB，开 `EnableCompressionInSingleFile` 后压到 55MB 左右 —— 这个量级不是代码写胖了，是运行时本身的重量。
+
+三大块拆开看（未压缩）：
+
+| 来源 | 体积 | 能不能去 |
+|---|---|---|
+| WPF 栈（PresentationFramework 15.4 / PresentationCore 8.1 / WindowsBase 2.2 / Xaml 1.4…） | ~30MB | 不能。界面外壳就是 WPF |
+| BCL（CoreLib 12.6 / Private.Xml 7.6 / Linq.Expressions 3.5 / Cryptography 2.0…） | ~40MB | 只能靠 trimming，而 WPF 不支持 trimming |
+| 原生（coreclr 4.8 / D3DCompiler 4.5 / wpfgfx 1.9 / clrjit 1.7） | ~20MB | 不能。这是运行时本体 |
+
+真正砍掉的部分，都是「只在调试期/特定控件才加载」的可选程序集：
+
+- **WinForms 栈 18MB → 0**：托盘从 `NotifyIcon` 换成手写 `Shell_NotifyIcon` + 原生 `TrackPopupMenu`（`Interop/Shell.cs`）。压缩后省 5.7MB，是最大的一刀。代价要自己处理 explorer 重启的 `TaskbarCreated` 广播，否则资源管理器一崩图标就永久消失。
+- **WinForms 设计器 5.3MB**、**DiaSymReader 2.1MB**、**mscordaccore/mscordbi 2.5MB**、**Ribbon 1.4MB**、**ReachFramework(XPS) 1.5MB** → 0：全是运行时零引用的东西，在 csproj 的 `TrimPublishPayload` 里按文件名剔掉。
+
+实测阶梯：63.9MB（原始）→ 62.3MB（剔诊断类）→ 61.1MB（再剔 Ribbon/XPS）→ **55.4MB**（去 WinForms）。
+
+### 这一刀踩到的两个真依赖（都是运行起来才暴露的）
+
+1. **`Microsoft.Web.WebView2.WinForms.dll` 会把 WinForms 反向拖回来**。只是删掉 `<UseWindowsForms>` 没用 —— WebView2 包同时提供 WinForms 和 WPF 两种宿主，前者的程序集在发布清单里，于是 `System.Windows.Forms` 12.9MB 又跟着进来了。必须把那个宿主 dll 也剔掉，体积才真的降。
+2. **`WebView2.Wpf` 自己要 `System.Drawing`**。顺手把 `System.Drawing.Common` 一起删，启动就抛 `FileNotFoundException: System.Drawing, Version=4.0.0.0`，位置在 `EnsureCoreWebView2Async` 里。所以 System.Drawing 三件套（dll 门面 / Common / Primitives）必须留着，只能砍 `System.Drawing.Design` 那 30KB。
+3. 剔文件用的正则漏了 `$` 锚点，`System.Drawing.Primitives` 被 `System.Drawing` 前缀匹配一起删掉，表现是启动时 `XamlParseException` + `FileNotFoundException: System.Drawing.Primitives`。加锚点解决 —— 这条要不是跑了一遍，打包脚本会一直"成功"。
+
+不再往下砍的原因：`System.Private.Xml` 是 XAML 解析的根依赖，删了启动就崩；剩下的 BCL 大件被 WebView2 和 JSON 序列化间接引用，属于猜测性删除 —— 一旦踩中，要等用户某次点操作才炸。这个风险换不来几百 KB。
+
+如果 55MB 仍然嫌大，只有一条路：接受「目标机已装 .NET 8 桌面运行时」，用框架依赖发布，产物 1.8MB。
+
 
 ---
 
@@ -27,6 +59,8 @@ assets/app.ico               应用图标（9 档尺寸，16–256）
 scripts/make-icon.ps1        纯 GDI+ 生成上面那个 .ico，不依赖设计软件
 scripts/publish.ps1          打包单文件 exe
 scripts/icon-preview.ps1     把各档尺寸拼成一张图，用来眼睛验收
+scripts/icon-hicon-check.ps1 验证 .ico → HICON 这条托盘图标链
+scripts/shot-screen.ps1      截全屏（含 DPI 换算），核对托盘与挂件
 
 src/WorkPepTalk/
 ├── App.xaml(.cs)            应用入口、单实例锁、未捕获异常兜底
@@ -36,10 +70,12 @@ src/WorkPepTalk/
 │   ├── AppPaths.cs          程序目录解析（单文件下也指向 exe 所在处）
 │   ├── ConfigStore.cs       读写 config.json（原子写、坏文件自动备份重建）
 │   ├── AutoStart.cs         HKCU Run 键，免管理员权限
-│   ├── Tray.cs              托盘图标与右键菜单
-│   ├── IconFactory.cs       从程序集资源里取图标，资源缺失时程序化兜底
+│   ├── Tray.cs              托盘图标与原生右键菜单（不依赖 WinForms）
+│   ├── IconFactory.cs       从程序集资源里挑一档 .ico 造成 HICON
 │   └── Log.cs               落盘日志，出问题有据可查
-├── Interop/Native.cs        拖窗、置顶、点击穿透、DWM 圆角
+├── Interop/
+│   ├── Native.cs            拖窗、置顶、穿透、DWM 圆角
+│   └── Shell.cs             托盘 / 显示器 / 光标 / 图标句柄，手写 Win32
 └── wwwroot/                 界面：HTML + CSS + JS（编译时内嵌进 exe）
     ├── js/core.js           计算内核（纯函数，可单测）
     ├── js/render.js         挂件渲染（三主题共用一套 DOM）

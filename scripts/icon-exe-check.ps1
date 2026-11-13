@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Exe = 'C:\Users\98201\WorkBuddy\spaces\2026_11_13_09-49-11\publish\WorkPepTalk.exe'
 )
 Add-Type -AssemblyName System.Drawing
